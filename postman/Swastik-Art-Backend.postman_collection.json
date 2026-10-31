@@ -1,0 +1,628 @@
+{
+  "info": {
+    "_postman_id": "c1fd7cab-d9dc-4a82-8d20-e24984edc203",
+    "name": "Swastik Art Backend API",
+    "description": "API collection for the Swastik Art backend. Register or log in first; the returned JWT is saved automatically and used by protected requests. Replace example request bodies with your own data before sending.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "withdrawalId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "merchantId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Check API and database status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Public health endpoint."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register first account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.token) pm.collectionVariables.set('token', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Your Name\",\n  \"email\": \"you@example.com\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "register"
+              ]
+            },
+            "description": "Creates an account. The first account receives the Owner & Admin role; subsequent public registrations receive Operator. On success, saves the JWT to the collection variable."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.token) pm.collectionVariables.set('token', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"you@example.com\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "description": "Logs in and saves the returned JWT to the collection variable for protected API requests."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get current user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List users (admin only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Requires Owner & Admin or Admin role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workers",
+      "item": [
+        {
+          "name": "List workers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workers?search=&status=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional search across name, mobile number, machine type, and role."
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Optional worker status filter."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create worker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.worker && body.worker._id) pm.collectionVariables.set('workerId', body.worker._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Worker Name\",\n  \"mobileNumber\": \"9000000000\",\n  \"role\": \"Embroidery Operator\",\n  \"machineType\": \"Embroidery Machine\",\n  \"salary\": 20000,\n  \"bonus\": 0,\n  \"status\": \"Active\",\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers"
+              ]
+            },
+            "description": "Creates a worker and saves the returned worker ID to the collection variable."
+          }
+        },
+        {
+          "name": "Get worker",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update worker",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Worker Name\",\n  \"mobileNumber\": \"9000000000\",\n  \"role\": \"Embroidery Operator\",\n  \"machineType\": \"Embroidery Machine\",\n  \"salary\": 22000,\n  \"bonus\": 0,\n  \"status\": \"Active\",\n  \"notes\": \"Updated notes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get worker summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add withdrawal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  const withdrawals = body.worker && body.worker.withdrawals;",
+                  "  if (withdrawals && withdrawals.length) {",
+                  "    pm.collectionVariables.set('withdrawalId', withdrawals[withdrawals.length - 1]._id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"paymentMethod\": \"Cash\",\n  \"note\": \"Advance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}/withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}",
+                "withdrawals"
+              ]
+            },
+            "description": "Adds a withdrawal and saves the new withdrawal ID for the delete request."
+          }
+        },
+        {
+          "name": "Delete withdrawal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}/withdrawals/{{withdrawalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}",
+                "withdrawals",
+                "{{withdrawalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add bonus",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"reason\": \"Performance bonus\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}/bonuses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}",
+                "bonuses"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete worker",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workers/{{workerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workers",
+                "{{workerId}}"
+              ]
+            },
+            "description": "Deletes the worker identified by the workerId collection variable."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Merchants",
+      "item": [
+        {
+          "name": "List merchants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/merchants?search=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "merchants"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional search across name, address, and mobile number."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create merchant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.merchant && body.merchant._id) pm.collectionVariables.set('merchantId', body.merchant._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rajeshbhai Patel\",\n  \"address\": \"Ring Road, Surat, Gujarat\",\n  \"mobileNumber\": \"9876543210\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/merchants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "merchants"
+              ]
+            },
+            "description": "Creates a merchant with Name, address, and mobile number. Saves merchantId."
+          }
+        },
+        {
+          "name": "Get merchant by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/merchants/{{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "merchants",
+                "{{merchantId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update merchant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rajeshbhai Patel (Updated)\",\n  \"address\": \"Millennium Textile Market, Ring Road, Surat\",\n  \"mobileNumber\": \"9876543210\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/merchants/{{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "merchants",
+                "{{merchantId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete merchant",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/merchants/{{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "merchants",
+                "{{merchantId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
