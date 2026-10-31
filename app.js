@@ -17,6 +17,16 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// સ્વાગત / હેલ્થ રુટ (Root Welcome Endpoint)
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: '🚀 Swastik Art Backend is live!',
+    status: 'Running',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use('/api', healthRoutes);
 app.use('/api', authRoutes);
 app.use('/api', authenticateToken);
