@@ -1,3 +1,4 @@
 node_modules/
 .env
 *.log
+push_to_github.bat
