@@ -75,6 +75,26 @@ export async function listWorkers(req, res) {
         0
       );
 
+      // તે મહિનાનું દૈનિક પ્રોડક્શન
+      const monthDailyProductions = (worker.dailyProductions || []).filter((p) => {
+        const itemMonth = p.month || getMonthKey(p.date);
+        return itemMonth === targetMonth;
+      });
+
+      const totalProductionForMonth = monthDailyProductions.reduce(
+        (sum, p) => sum + (Number(p.amount) || 0),
+        0
+      );
+
+      const totalQuantityForMonth = monthDailyProductions.reduce(
+        (sum, p) => sum + (Number(p.quantity) || 0),
+        0
+      );
+
+      const targetProd = Number(worker.targetProduction) || 500000;
+      const stepProd = Number(worker.productionStep) || 50000;
+      const rateProd = Number(worker.incentiveRate) || 50;
+
       // તપાસો કે આ મહિનાનો પગાર ચૂકવાઈ ગયો છે? (Settlement check)
       const settlement = (worker.monthlySettlements || []).find(
         (s) => s.month === targetMonth
@@ -94,6 +114,13 @@ export async function listWorkers(req, res) {
         monthTotalWithdrawals: totalWithdrawalsForMonth,
         monthBonuses,
         monthTotalBonus: totalBonusForMonth,
+        monthDailyProductions,
+        monthTotalProduction: totalProductionForMonth,
+        monthTotalQuantity: totalQuantityForMonth,
+        monthProductionCount: monthDailyProductions.length,
+        targetProduction: targetProd,
+        productionStep: stepProd,
+        incentiveRate: rateProd,
         monthNetPayable: netPayableForMonth,
         settlement: settlement || null,
         isSettled
@@ -135,7 +162,21 @@ export async function getWorker(req, res) {
 // ૩. નવો કારીગર ઉમેરો (Create Worker)
 export async function createWorker(req, res) {
   try {
-    const { name, mobileNumber, role, machineType, salary, bonus, joinDate, notes, status, activeMonth } = req.body;
+    const {
+      name,
+      mobileNumber,
+      role,
+      machineType,
+      salary,
+      bonus,
+      targetProduction,
+      productionStep,
+      incentiveRate,
+      joinDate,
+      notes,
+      status,
+      activeMonth
+    } = req.body;
 
     if (!name || !mobileNumber || !machineType || salary === undefined) {
       return res.status(400).json({
@@ -153,6 +194,9 @@ export async function createWorker(req, res) {
       machineType: machineType.trim(),
       salary: Number(salary) || 0,
       bonus: Number(bonus) || 0,
+      targetProduction: targetProduction !== undefined ? Number(targetProduction) : 500000,
+      productionStep: productionStep !== undefined ? Number(productionStep) : 50000,
+      incentiveRate: incentiveRate !== undefined ? Number(incentiveRate) : 50,
       activeMonth: currentMonth,
       joinDate: joinDate ? new Date(joinDate) : new Date(),
       status: status || 'Active',
@@ -176,7 +220,21 @@ export async function createWorker(req, res) {
 // ૪. કારીગર સુધારો (Update Worker)
 export async function updateWorker(req, res) {
   try {
-    const { name, mobileNumber, role, machineType, salary, bonus, joinDate, notes, status, activeMonth } = req.body;
+    const {
+      name,
+      mobileNumber,
+      role,
+      machineType,
+      salary,
+      bonus,
+      targetProduction,
+      productionStep,
+      incentiveRate,
+      joinDate,
+      notes,
+      status,
+      activeMonth
+    } = req.body;
     const worker = await Worker.findById(req.params.id);
     if (!worker) {
       return res.status(404).json({
@@ -191,6 +249,9 @@ export async function updateWorker(req, res) {
     if (machineType) worker.machineType = machineType.trim();
     if (salary !== undefined) worker.salary = Number(salary);
     if (bonus !== undefined) worker.bonus = Number(bonus);
+    if (targetProduction !== undefined) worker.targetProduction = Number(targetProduction);
+    if (productionStep !== undefined) worker.productionStep = Number(productionStep);
+    if (incentiveRate !== undefined) worker.incentiveRate = Number(incentiveRate);
     if (joinDate) worker.joinDate = new Date(joinDate);
     if (notes !== undefined) worker.notes = notes;
     if (status) worker.status = status;
@@ -558,6 +619,171 @@ export async function getWorkerSummary(req, res) {
       netPayable: (worker.salary + totalBonus) - totalWithdrawals,
       settlement: settlement || null,
       isSettled
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+// ======================================================================
+// કારીગર પ્રોડક્શન & ઓટો બોનસ સિન્ક્રોનાઇઝેશન (Worker Production & Auto Bonus)
+// ======================================================================
+
+// ૧૨. સહાયક: કારીગરના દૈનિક પ્રોડક્શન પરથી આપોઆપ બોનસ ગણતરી અને Worker મોડ્યુલના Bonuses માં સેવ કરવું
+export function syncWorkerProductionIncentive(worker, monthKey, entryDate) {
+  const targetMonth = monthKey || worker.activeMonth || getMonthKey(new Date());
+
+  // તે મહિનાનું કુલ પ્રોડક્શન
+  const monthDailyProductions = (worker.dailyProductions || []).filter((p) => {
+    const itemMonth = p.month || getMonthKey(p.date);
+    return itemMonth === targetMonth;
+  });
+
+  const totalProduction = monthDailyProductions.reduce(
+    (sum, p) => sum + (Number(p.amount) || 0),
+    0
+  );
+
+  const target = Number(worker.targetProduction) || 500000;
+  const step = Number(worker.productionStep) || 50000;
+  const rate = Number(worker.incentiveRate) || 50;
+
+  // જો પ્રોડક્શન ટાર્ગેટ (દા.ત. ₹5,00,000) થી વધુ હોય તો બોનસ ગણો
+  let incentive = 0;
+  if (totalProduction > target && step > 0) {
+    incentive = Math.floor((totalProduction - target) / step) * rate;
+  }
+
+  // વર્કરના બોનસ એરેમાં આ મહિનાનું ઓટો-ઇન્સેન્ટિવ બોનસ શોધો
+  const existingBonusIndex = (worker.bonuses || []).findIndex((b) => {
+    const bMonth = b.month || getMonthKey(b.date);
+    return bMonth === targetMonth && b.isAutoIncentive;
+  });
+
+  if (incentive > 0) {
+    const reasonText = `પ્રોડક્શન ઇન્સેન્ટિવ (₹${totalProduction.toLocaleString('en-IN')} ઉત્પાદન પર)`;
+    if (existingBonusIndex > -1) {
+      worker.bonuses[existingBonusIndex].amount = incentive;
+      worker.bonuses[existingBonusIndex].reason = reasonText;
+      worker.bonuses[existingBonusIndex].productionAmount = totalProduction;
+      if (entryDate) worker.bonuses[existingBonusIndex].date = new Date(entryDate);
+    } else {
+      worker.bonuses.push({
+        amount: incentive,
+        date: entryDate ? new Date(entryDate) : new Date(),
+        month: targetMonth,
+        reason: reasonText,
+        isAutoIncentive: true,
+        productionAmount: totalProduction
+      });
+    }
+  } else {
+    // જો પ્રોડક્શન ટાર્ગેટથી ઓછું હોય તો ઓટો બોનસ હટાવો
+    if (existingBonusIndex > -1) {
+      worker.bonuses.splice(existingBonusIndex, 1);
+    }
+  }
+
+  return { totalProduction, incentive };
+}
+
+// ૧૩. કારીગર માટે દૈનિક પ્રોડક્શન એન્ટ્રી ઉમેરો (Add Daily Production for Worker)
+export async function addWorkerDailyProduction(req, res) {
+  try {
+    const { date, amount, quantity, remarks, month } = req.body;
+    if (amount === undefined || Number(amount) < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'યોગ્ય પ્રોડક્શન રકમ (₹) દાખલ કરો.'
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+    if (!worker) {
+      return res.status(404).json({ success: false, message: 'કારીગર મળ્યા નથી' });
+    }
+
+    const recordDate = date ? new Date(date) : new Date();
+    const targetMonth = month || getMonthKey(recordDate);
+
+    worker.dailyProductions.push({
+      date: recordDate,
+      month: targetMonth,
+      amount: Number(amount),
+      quantity: Number(quantity) || 0,
+      remarks: remarks || ''
+    });
+
+    // ઓટોમેટિક બોનસ સિન્ક કરો (જો 5L થી વધુ હોય તો Worker Bonuses માં આપોઆપ ઉમેરાશે)
+    const syncResult = syncWorkerProductionIncentive(worker, targetMonth, recordDate);
+    await worker.save();
+
+    let bonusMsg = '';
+    if (syncResult.incentive > 0) {
+      bonusMsg = ` તેમજ ₹${syncResult.incentive.toLocaleString('en-IN')} પ્રોડક્શન બોનસ કારીગરના પગારમાં આપોઆપ ઉમેરાઈ ગયું!`;
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `₹${Number(amount).toLocaleString('en-IN')} નું દૈનિક પ્રોડક્શન સફળતાપૂર્વક નોંધાઈ ગયું!${bonusMsg}`,
+      worker,
+      syncResult
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+// ૧૪. કારીગરની દૈનિક પ્રોડક્શન એન્ટ્રી ડિલીટ કરો (Delete Daily Production)
+export async function deleteWorkerDailyProduction(req, res) {
+  try {
+    const worker = await Worker.findById(req.params.id);
+    if (!worker) {
+      return res.status(404).json({ success: false, message: 'કારીગર મળ્યા નથી' });
+    }
+
+    const entry = worker.dailyProductions.id(req.params.entryId);
+    const targetMonth = entry?.month || getMonthKey(entry?.date);
+
+    worker.dailyProductions = worker.dailyProductions.filter(
+      (p) => p._id.toString() !== req.params.entryId
+    );
+
+    syncWorkerProductionIncentive(worker, targetMonth);
+    await worker.save();
+
+    return res.json({
+      success: true,
+      message: 'પ્રોડક્શન એન્ટ્રી સફળતાપૂર્વક ડિલીટ થઈ ગઈ!',
+      worker
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+// ૧૫. કારીગરનો પ્રોડક્શન ટાર્ગેટ અને બોનસ રેટ બદલો (Update Production Target & Bonus Rule)
+export async function updateWorkerProductionRule(req, res) {
+  try {
+    const { targetProduction, productionStep, incentiveRate, month } = req.body;
+    const worker = await Worker.findById(req.params.id);
+    if (!worker) {
+      return res.status(404).json({ success: false, message: 'કારીગર મળ્યા નથી' });
+    }
+
+    if (targetProduction !== undefined) worker.targetProduction = Number(targetProduction);
+    if (productionStep !== undefined) worker.productionStep = Number(productionStep);
+    if (incentiveRate !== undefined) worker.incentiveRate = Number(incentiveRate);
+
+    const targetMonth = month || worker.activeMonth || getMonthKey(new Date());
+    const syncResult = syncWorkerProductionIncentive(worker, targetMonth);
+    await worker.save();
+
+    return res.json({
+      success: true,
+      message: `${worker.name} માટે ટાર્ગેટ ₹${Number(worker.targetProduction).toLocaleString('en-IN')} અને બોનસ ₹${worker.incentiveRate} પ્રતિ ₹${worker.productionStep} નિયમ સેવ થયો!`,
+      worker,
+      syncResult
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

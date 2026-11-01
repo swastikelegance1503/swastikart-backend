@@ -2,16 +2,19 @@ import { Router } from 'express';
 import {
   addBonus,
   addWithdrawal,
+  addWorkerDailyProduction,
   createWorker,
   deleteBonus,
   deleteWorker,
   deleteWithdrawal,
+  deleteWorkerDailyProduction,
   getWorker,
   getWorkerSummary,
   listWorkers,
   settleMonth,
   updateSettlement,
-  updateWorker
+  updateWorker,
+  updateWorkerProductionRule
 } from '../controllers/workerController.js';
 
 const router = Router();
@@ -28,6 +31,11 @@ router.post('/workers/:id/withdrawals', addWithdrawal);
 router.delete('/workers/:id/withdrawals/:withdrawalId', deleteWithdrawal);
 router.post('/workers/:id/bonuses', addBonus);
 router.delete('/workers/:id/bonuses/:bonusId', deleteBonus);
+
+// દૈનિક પ્રોડક્શન & ઓટો બોનસ નિયમ (Daily Production & Auto Bonus Rules)
+router.post('/workers/:id/daily-production', addWorkerDailyProduction);
+router.delete('/workers/:id/daily-production/:entryId', deleteWorkerDailyProduction);
+router.put('/workers/:id/production-rule', updateWorkerProductionRule);
 
 // માસિક પગાર પતાવટ અને સુધારો (Monthly Settlement & Edit)
 router.post('/workers/:id/settle-month', settleMonth);

@@ -55,3 +55,4 @@ router.get('/production/config', getIncentiveConfig);
 router.put('/production/config', updateIncentiveConfig);
 
 export default router;
+

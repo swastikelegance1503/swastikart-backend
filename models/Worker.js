@@ -60,6 +60,48 @@ const bonusSchema = new mongoose.Schema({
     trim: true,
     default: 'Festival / Performance Bonus'
   },
+  isAutoIncentive: {
+    type: Boolean,
+    default: false
+  },
+  productionAmount: {
+    type: Number,
+    default: 0
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// દૈનિક ઉત્પાદન (Daily Production) સ્કીમા
+const dailyProductionEntrySchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    default: Date.now,
+    required: true
+  },
+  month: {
+    type: String, // e.g. "2026-11" (YYYY-MM)
+    default: function () {
+      const d = this.date ? new Date(this.date) : new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+  },
+  amount: {
+    type: Number,
+    required: [true, 'Production amount is required'],
+    min: [0, 'Amount must be positive']
+  },
+  quantity: {
+    type: Number,
+    default: 0
+  },
+  remarks: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -158,6 +200,24 @@ const workerSchema = new mongoose.Schema({
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
   },
+  // કસ્ટમ પ્રોડક્શન ટાર્ગેટ અને બોનસ નિયમો (Custom Production Target & Bonus Rule)
+  targetProduction: {
+    type: Number,
+    default: 500000, // ડિફોલ્ટ ₹5,00,000 ટાર્ગેટ
+    min: 0
+  },
+  productionStep: {
+    type: Number,
+    default: 50000, // ડિફોલ્ટ ₹50,000 સ્ટેપ
+    min: 1
+  },
+  incentiveRate: {
+    type: Number,
+    default: 50, // ડિફોલ્ટ દર સ્ટેપે ₹50 બોનસ
+    min: 0
+  },
+  // દૈનિક પ્રોડક્શન એન્ટ્રીઓ (Daily Production Records)
+  dailyProductions: [dailyProductionEntrySchema],
   // ઉપાડ ની વિગતો
   withdrawals: [withdrawalSchema],
   // બોનસ ની વિગતો

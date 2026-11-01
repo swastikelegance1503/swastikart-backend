@@ -33,3 +33,4 @@ const productionConfigSchema = new mongoose.Schema(
 
 const ProductionConfig = mongoose.model('ProductionConfig', productionConfigSchema);
 export default ProductionConfig;
+
