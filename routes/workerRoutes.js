@@ -3,6 +3,7 @@ import {
   addBonus,
   addWithdrawal,
   createWorker,
+  deleteBonus,
   deleteWorker,
   deleteWithdrawal,
   getWorker,
@@ -26,6 +27,7 @@ router.delete('/workers/:id', deleteWorker);
 router.post('/workers/:id/withdrawals', addWithdrawal);
 router.delete('/workers/:id/withdrawals/:withdrawalId', deleteWithdrawal);
 router.post('/workers/:id/bonuses', addBonus);
+router.delete('/workers/:id/bonuses/:bonusId', deleteBonus);
 
 // માસિક પગાર પતાવટ અને સુધારો (Monthly Settlement & Edit)
 router.post('/workers/:id/settle-month', settleMonth);

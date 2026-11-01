@@ -334,7 +334,33 @@ export async function addBonus(req, res) {
   }
 }
 
-// ૯. માસિક પગાર પતાવટ / કમ્પ્લીટ કરો (Settle Month Salary & Advance to Next Month)
+// ૯. બોનસ ડિલીટ કરો (Delete Bonus Entry)
+export async function deleteBonus(req, res) {
+  try {
+    const worker = await Worker.findById(req.params.id);
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'કારીગર મળ્યા નથી (Worker not found)'
+      });
+    }
+
+    worker.bonuses = (worker.bonuses || []).filter(
+      (bonus) => bonus._id.toString() !== req.params.bonusId
+    );
+    await worker.save();
+
+    return res.json({
+      success: true,
+      message: 'બોનસ એન્ટ્રી સફળતાપૂર્વક હટાવી દેવામાં આવી! (Bonus entry removed!)',
+      worker
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+// ૧૦. માસિક પગાર પતાવટ / કમ્પ્લીટ કરો (Settle Month Salary & Advance to Next Month)
 export async function settleMonth(req, res) {
   try {
     const { month, paymentMode, notes, settlementDate } = req.body;
