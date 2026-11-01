@@ -399,3 +399,4 @@ export async function listAllMachineDailyProductions(req, res) {
     return res.status(500).json({ success: false, message: error.message });
   }
 }
+

@@ -161,3 +161,4 @@ const machineSchema = new mongoose.Schema(
 const Machine = mongoose.models.Machine || mongoose.model('Machine', machineSchema);
 
 export default Machine;
+

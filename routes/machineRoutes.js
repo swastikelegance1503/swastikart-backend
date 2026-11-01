@@ -25,3 +25,4 @@ router.post('/machines/:id/daily-production', addMachineDailyProduction);
 router.delete('/machines/:id/daily-production/:entryId', deleteMachineDailyProduction);
 
 export default router;
+
