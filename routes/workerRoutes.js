@@ -8,6 +8,8 @@ import {
   getWorker,
   getWorkerSummary,
   listWorkers,
+  settleMonth,
+  updateSettlement,
   updateWorker
 } from '../controllers/workerController.js';
 
@@ -19,8 +21,14 @@ router.get('/workers/:id/summary', getWorkerSummary);
 router.get('/workers/:id', getWorker);
 router.put('/workers/:id', updateWorker);
 router.delete('/workers/:id', deleteWorker);
+
+// ઉપાડ અને બોનસ
 router.post('/workers/:id/withdrawals', addWithdrawal);
 router.delete('/workers/:id/withdrawals/:withdrawalId', deleteWithdrawal);
 router.post('/workers/:id/bonuses', addBonus);
+
+// માસિક પગાર પતાવટ અને સુધારો (Monthly Settlement & Edit)
+router.post('/workers/:id/settle-month', settleMonth);
+router.put('/workers/:id/settle-month/:settlementId', updateSettlement);
 
 export default router;
