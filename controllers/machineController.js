@@ -160,24 +160,34 @@ export async function createMachine(req, res) {
       notes
     } = req.body;
 
-    if (!name || !code || !machineType) {
+    if (!name || !machineType) {
       return res.status(400).json({
         success: false,
-        message: 'મશીનનું નામ, કોડ અને પ્રકાર જરૂરી છે. (Name, code, and type are required.)'
+        message: 'મશીનનું નામ (Machine Name) અને મશીનનો પ્રકાર (Type) જરૂરી છે.'
       });
     }
 
-    const existing = await Machine.findOne({ code: code.trim().toUpperCase() });
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: `મશીન કોડ "${code}" પહેલાથી અસ્તિત્વમાં છે. નવો કોડ વાપરો.`
-      });
+    let machineCode = (code || '').trim().toUpperCase();
+    if (!machineCode) {
+      const count = await Machine.countDocuments();
+      machineCode = `M-${String(count + 1).padStart(2, '0')}`;
+      const existingCode = await Machine.findOne({ code: machineCode });
+      if (existingCode) {
+        machineCode = `M-${Date.now().toString().slice(-4)}`;
+      }
+    } else {
+      const existing = await Machine.findOne({ code: machineCode });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: `મશીન કોડ "${machineCode}" પહેલાથી અસ્તિત્વમાં છે. નવો કોડ વાપરો.`
+        });
+      }
     }
 
     const machine = await Machine.create({
       name: name.trim(),
-      code: code.trim().toUpperCase(),
+      code: machineCode,
       machineType: machineType.trim(),
       headCount: Number(headCount) || 24,
       model: model ? model.trim() : '',
