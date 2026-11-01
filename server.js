@@ -15,6 +15,7 @@ async function startServer() {
     console.log(`🏬 Merchants API: GET/POST http://localhost:${PORT}/api/merchants`);
     console.log(`👷 Workers API: GET/POST http://localhost:${PORT}/api/workers`);
     console.log(`🏭 Production API: GET/POST http://localhost:${PORT}/api/production/monthly-summary`);
+    console.log(`⚙️ Machines API: GET/POST http://localhost:${PORT}/api/machines`);
     console.log(`📄 Challans API: GET/POST http://localhost:${PORT}/api/challans`);
     console.log(`📊 Date Summary: GET http://localhost:${PORT}/api/challans/date-summary`);
     console.log(`🖨️ Print Challan: GET http://localhost:${PORT}/api/challans/:id/print`);
