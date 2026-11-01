@@ -21,6 +21,7 @@ router.put('/machines/:id', updateMachine);
 router.delete('/machines/:id', deleteMachine);
 
 // મશીન દૈનિક પ્રોડક્શન રૂટ્સ (Machine Daily Production Routes)
+router.post('/machines/daily-production', addMachineDailyProduction);
 router.post('/machines/:id/daily-production', addMachineDailyProduction);
 router.delete('/machines/:id/daily-production/:entryId', deleteMachineDailyProduction);
 

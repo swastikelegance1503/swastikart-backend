@@ -29,12 +29,32 @@ const machineDailyEntrySchema = new mongoose.Schema(
       enum: ['Day', 'Night', 'General'],
       default: 'Day'
     },
+    startTime: {
+      type: String, // e.g. "08:00" અથવા "08:00 AM"
+      trim: true,
+      default: ''
+    },
+    endTime: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     operatorName: {
       type: String,
       trim: true,
       default: ''
     },
     operator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Worker',
+      default: null
+    },
+    workerName: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    worker: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Worker',
       default: null
