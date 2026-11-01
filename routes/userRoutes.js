@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/authMiddleware.js';
 const router = Router();
 
 router.get('/me', getCurrentUser);
+router.get('/user/profile', getCurrentUser);
 router.get('/users', requireRole('Owner & Admin', 'Admin'), listUsers);
 
 export default router;

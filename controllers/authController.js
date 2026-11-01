@@ -57,6 +57,7 @@ export async function register(req, res) {
       success: true,
       message: 'MongoDB માં નવું એકાઉન્ટ સફળતાપૂર્વક બન્યું! (User registered in MongoDB successfully!)',
       token,
+      authToken: token,
       user: {
         id: newUser._id,
         name: newUser.name,
@@ -83,15 +84,17 @@ export async function register(req, res) {
 
 export async function login(req, res) {
   try {
-    const { email, password } = req.body;
-    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
+    const rawEmail = req.body.email || req.body.username;
+    const { password } = req.body;
+    if (typeof rawEmail !== 'string' || typeof password !== 'string' || !rawEmail.trim() || !password) {
       return res.status(400).json({
         success: false,
-        message: 'ઇમેઇલ અને પાસવર્ડ બંને જરૂરી છે. (Email and password are required.)'
+        message: 'ઇમેઇલ અને પાસવર્ડ બંને જરૂરી છે. (Email/Username and password are required.)'
       });
     }
 
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
+    const email = rawEmail.trim().toLowerCase();
+    const user = await User.findOne({ email }).select('+password');
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({
         success: false,
@@ -109,6 +112,7 @@ export async function login(req, res) {
       success: true,
       message: 'સફળતાપૂર્વક લોગિન થયું! (Login successful!)',
       token,
+      authToken: token,
       user: {
         id: user._id,
         name: user.name,
