@@ -30,6 +30,11 @@ const withdrawalSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  addedBy: {
+    type: String,
+    trim: true,
+    default: 'Admin'
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -68,6 +73,34 @@ const bonusSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  machineId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Machine',
+    default: null
+  },
+  machineCode: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  machineName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  machineDailyEntryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+  productionEntryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+  slab: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -101,6 +134,38 @@ const dailyProductionEntrySchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  bonusAmount: {
+    type: Number,
+    default: 0
+  },
+  slab: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  machineId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Machine',
+    default: null
+  },
+  machineName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  machineCode: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  machineHeadCount: {
+    type: Number,
+    default: 24
+  },
+  machineDailyEntryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
   },
   createdAt: {
     type: Date,
@@ -181,15 +246,28 @@ const workerSchema = new mongoose.Schema({
     default: 'Embroidery Operator',
     trim: true
   },
+  machine: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Machine',
+    default: null
+  },
+  machineName: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  machineCode: {
+    type: String,
+    default: '',
+    trim: true
+  },
   machineType: {
     type: String,
-    required: [true, 'મશીનનો પ્રકાર જરૂરી છે (Machine type is required)'],
+    default: '',
     trim: true
   },
   salary: {
     type: Number,
-    required: [true, 'પગાર/સેલેરી જરૂરી છે (Salary is required)'],
-    min: [0, 'Salary must be positive'],
     default: 0
   },
   // ચાલુ સક્રિય મહિનો (Current Active Month Cycle)

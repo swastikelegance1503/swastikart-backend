@@ -3,6 +3,11 @@ import Merchant from '../models/Merchant.js';
 import Profile from '../models/Profile.js';
 import { DEFAULT_PROFILES } from '../config/defaultProfiles.js';
 import { generateChallanPrintHtml } from '../utils/printTemplate.js';
+import {
+  syncChallanToGoogleDrive,
+  getDriveConfig,
+  updateDriveConfig
+} from '../utils/googleDriveSync.js';
 
 // નવો ચલણ / બિલ બનાવો (Create Challan / Bill)
 export async function createChallan(req, res) {
@@ -138,14 +143,29 @@ export async function createChallan(req, res) {
     const totalGst = Number((cgstAmount + sgstAmount + igstAmount).toFixed(2));
     const grandTotal = Number((totalAmountBeforeTax + totalGst).toFixed(2));
 
-    // ૬. બિલ નંબર (જો ન આપ્યો હોય તો ઓટો-જનરેટ 101 થી શરૂ)
+    // ૬. બિલ નંબર અને ચલાણ નંબર ઓટો-જનરેટ
     let billNo = rawBillNo;
     if (!billNo) {
       const lastChallan = await Challan.findOne({ firmName }).sort({ createdAt: -1 });
       if (lastChallan && !isNaN(Number(lastChallan.billNo))) {
         billNo = String(Number(lastChallan.billNo) + 1);
       } else {
-        billNo = '101';
+        const anyLast = await Challan.findOne().sort({ createdAt: -1 });
+        billNo = (anyLast && !isNaN(Number(anyLast.billNo))) ? String(Number(anyLast.billNo) + 1) : '1';
+      }
+    }
+
+    let finalChallanNo = challanNo;
+    if (!finalChallanNo) {
+      const lastChallanWithCh = await Challan.findOne({
+        firmName,
+        challanNo: { $exists: true, $ne: '' }
+      }).sort({ createdAt: -1 });
+
+      if (lastChallanWithCh && !isNaN(Number(lastChallanWithCh.challanNo))) {
+        finalChallanNo = String(Number(lastChallanWithCh.challanNo) + 1);
+      } else {
+        finalChallanNo = billNo;
       }
     }
 
@@ -162,7 +182,7 @@ export async function createChallan(req, res) {
       stateCode: stateCode || '24',
       billNo: String(billNo).trim(),
       bookNo: (bookNo || '').trim(),
-      challanNo: (challanNo || '').trim(),
+      challanNo: String(finalChallanNo).trim(),
       date: date ? new Date(date) : new Date(),
       dueDate: dueDate ? new Date(dueDate) : undefined,
       items: processedItems,
@@ -183,6 +203,11 @@ export async function createChallan(req, res) {
       firmSnapshot,
       notes: notes || '',
       status: status || 'Pending'
+    });
+
+    // ૮. Google Drive & Google Sheet ઓટો-સિંક (swastikelegance065@gmail.com)
+    syncChallanToGoogleDrive(challan).catch((syncErr) => {
+      console.warn('Background Google Drive sync warning:', syncErr.message);
     });
 
     return res.status(201).json({
@@ -467,6 +492,11 @@ export async function updateChallan(req, res) {
 
     await challan.save();
 
+    // Google Drive પર પણ અપડેટ કરો
+    syncChallanToGoogleDrive(challan).catch((syncErr) => {
+      console.warn('Background Google Drive sync warning on update:', syncErr.message);
+    });
+
     return res.json({
       success: true,
       message: 'ચલણ સફળતાપૂર્વક અપડેટ થઈ ગયું! (Challan updated successfully!)',
@@ -496,4 +526,105 @@ export async function deleteChallan(req, res) {
     return res.status(500).json({ success: false, message: error.message });
   }
 }
+
+// =========================================================================
+// GOOGLE DRIVE & GOOGLE SHEET SYNC APIS (swastikelegance065@gmail.com)
+// =========================================================================
+
+/**
+ * મેળવો Google Drive સેટિંગ્સ
+ */
+export async function getGoogleDriveConfigHandler(req, res) {
+  try {
+    const config = await getDriveConfig();
+    return res.json({
+      success: true,
+      config: {
+        ...config,
+        isConfigured: Boolean(config.webhookUrl && config.webhookUrl.trim().startsWith('http'))
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * અપડેટ કરો Google Drive સેટિંગ્સ
+ */
+export async function updateGoogleDriveConfigHandler(req, res) {
+  try {
+    const { webhookUrl, autoSync, email } = req.body;
+    const updated = await updateDriveConfig({
+      webhookUrl: (webhookUrl || '').trim(),
+      autoSync: autoSync !== undefined ? Boolean(autoSync) : true,
+      email: (email || 'swastikelegance065@gmail.com').trim()
+    });
+    return res.json({
+      success: true,
+      message: 'Google Drive સેટિંગ્સ સફળતાપૂર્વક સેવ થઈ ગઈ!',
+      config: {
+        ...updated,
+        isConfigured: Boolean(updated.webhookUrl && updated.webhookUrl.trim().startsWith('http'))
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * સિંગલ ચલાણ Google Drive માં સિંક કરો
+ */
+export async function syncSingleToDriveHandler(req, res) {
+  try {
+    const challan = await Challan.findById(req.params.id);
+    if (!challan) {
+      return res.status(404).json({ success: false, message: 'ચલાણ મળ્યું નથી' });
+    }
+
+    const result = await syncChallanToGoogleDrive(challan);
+    const updatedChallan = await Challan.findById(req.params.id);
+
+    return res.json({
+      success: result.success,
+      message: result.message || (result.success ? 'Google Drive માં સિંક થઈ ગયું!' : (result.error || 'Webhook URL કન્ફિગર કરેલ નથી')),
+      challan: updatedChallan,
+      data: result
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * તમામ ચલાણ બેચમાં Google Drive માં સિંક કરો
+ */
+export async function syncAllToDriveHandler(req, res) {
+  try {
+    const { forceAll } = req.body;
+    const query = forceAll ? {} : { googleDriveSynced: { $ne: true } };
+    const challans = await Challan.find(query).sort({ date: 1 });
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    for (const c of challans) {
+      const result = await syncChallanToGoogleDrive(c);
+      if (result.success) syncedCount++;
+      else failedCount++;
+    }
+
+    return res.json({
+      success: true,
+      message: `${syncedCount} બિલો સફળતાપૂર્વક Google Drive & Sheet માં સિંક થઈ ગયા!`,
+      syncedCount,
+      failedCount,
+      totalProcessed: challans.length
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
 

@@ -206,6 +206,22 @@ const challanSchema = new mongoose.Schema({
     type: String,
     enum: ['Pending', 'Paid', 'Partially Paid', 'Cancelled'],
     default: 'Pending'
+  },
+  // Google Drive સિંક સ્ટેટસ (swastikelegance065@gmail.com)
+  googleDriveSynced: {
+    type: Boolean,
+    default: false
+  },
+  googleDriveFileUrl: {
+    type: String,
+    default: ''
+  },
+  googleDriveSheetUrl: {
+    type: String,
+    default: ''
+  },
+  googleDriveSyncedAt: {
+    type: Date
   }
 }, {
   timestamps: true // createdAt and updatedAt auto-generated

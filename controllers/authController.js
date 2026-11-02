@@ -93,8 +93,14 @@ export async function login(req, res) {
       });
     }
 
-    const email = rawEmail.trim().toLowerCase();
-    const user = await User.findOne({ email }).select('+password');
+    const searchKey = rawEmail.trim().toLowerCase();
+    const user = await User.findOne({
+      $or: [
+        { email: searchKey },
+        { email: `${searchKey}@swastikart.com` },
+        { name: { $regex: new RegExp(`^${searchKey}$`, 'i') } }
+      ]
+    }).select('+password');
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({
         success: false,

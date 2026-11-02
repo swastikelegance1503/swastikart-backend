@@ -1,6 +1,10 @@
 import Machine from '../models/Machine.js';
 import Worker from '../models/Worker.js';
-import { syncWorkerProductionIncentive } from './workerController.js';
+import {
+  syncWorkerProductionIncentive,
+  syncWorkerMachineBonuses,
+  calculateProductionBonus
+} from './workerController.js';
 
 // સહાયક ફંક્શન: તારીખમાંથી YYYY-MM મેળવો
 function getMonthKey(dateInput) {
@@ -358,6 +362,19 @@ export async function addMachineDailyProduction(req, res) {
       resolvedWorkerId = machine.defaultOperator;
     }
 
+    // જો હજુ કારીગર ન મળ્યો હોય તો આ મશીન સાથે જોડાયેલ એક્ટિવ વર્કર શોધો
+    if (!resolvedWorkerId) {
+      try {
+        const assignedWorker = await Worker.findOne({ machine: targetMachineId, status: 'Active' });
+        if (assignedWorker) {
+          resolvedWorkerId = assignedWorker._id;
+          resolvedWorkerName = assignedWorker.name;
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
     const newEntry = {
       date: recordDate,
       month: targetMonth,
@@ -380,20 +397,50 @@ export async function addMachineDailyProduction(req, res) {
 
     machine.dailyProductions.push(newEntry);
     await machine.save();
+    const createdMachineEntry = machine.dailyProductions[machine.dailyProductions.length - 1];
 
-    // જો કારીગર સિલેક્ટ થયેલ હોય તો તેના Worker પ્રોફાઇલમાં પણ પ્રોડક્શન સિન્ક કરો
+    // જો કારીગર સિલેક્ટ/અસાઈન થયેલ હોય તો તેના માટે બોનસ અને પ્રોડક્શન સિન્ક કરો
     if (resolvedWorkerId) {
       try {
         const workerObj = await Worker.findById(resolvedWorkerId);
         if (workerObj) {
+          const numAmount = Number(amount);
+          const { bonus, slab } = calculateProductionBonus(numAmount);
+
           workerObj.dailyProductions.push({
             date: recordDate,
             month: targetMonth,
-            amount: Number(amount),
+            amount: numAmount,
             quantity: Number(quantity) || 0,
-            remarks: `${machine.name} (${machine.code}) - ${startTime ? `સમય: ${startTime} - ` : ''}${remarks || 'મશીન પ્રોડક્શન'}`
+            remarks: `${machine.name} (${machine.code}) - ${startTime ? `સમય: ${startTime} - ` : ''}${remarks || 'મશીન પ્રોડક્શન'}`,
+            bonusAmount: bonus,
+            slab,
+            machineId: machine._id,
+            machineName: machine.name,
+            machineCode: machine.code,
+            machineHeadCount: machine.headCount || 24,
+            machineDailyEntryId: createdMachineEntry._id
           });
-          syncWorkerProductionIncentive(workerObj, targetMonth, recordDate);
+
+          const createdWorkerProd = workerObj.dailyProductions[workerObj.dailyProductions.length - 1];
+
+          if (bonus > 0) {
+            workerObj.bonuses.push({
+              amount: bonus,
+              date: recordDate,
+              month: targetMonth,
+              reason: `દૈનિક પ્રોડક્શન બોનસ (${slab})`,
+              slab,
+              isAutoIncentive: true,
+              productionAmount: numAmount,
+              machineId: machine._id,
+              machineCode: machine.code,
+              machineName: machine.name,
+              machineDailyEntryId: createdMachineEntry._id,
+              productionEntryId: createdWorkerProd._id
+            });
+          }
+
           await workerObj.save();
         }
       } catch (wErr) {
@@ -428,6 +475,16 @@ export async function deleteMachineDailyProduction(req, res) {
     );
 
     await machine.save();
+
+    // કારીગરોના બોનસ અને દૈનિક પ્રોડક્શનમાંથી આ મશીન એન્ટ્રી હટાવી દો
+    await Worker.updateMany(
+      { 'bonuses.machineDailyEntryId': req.params.entryId },
+      { $pull: { bonuses: { machineDailyEntryId: req.params.entryId } } }
+    );
+    await Worker.updateMany(
+      { 'dailyProductions.machineDailyEntryId': req.params.entryId },
+      { $pull: { dailyProductions: { machineDailyEntryId: req.params.entryId } } }
+    );
 
     // કારીગર સાથે સિન્ક હોય તો તેની અંદરથી પણ દૂર કરો
     if (entryToDelete && (entryToDelete.worker || entryToDelete.operator)) {

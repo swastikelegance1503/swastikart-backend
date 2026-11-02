@@ -6,11 +6,22 @@ import {
   getDateWiseSummary,
   listChallans,
   printChallan,
-  updateChallan
+  updateChallan,
+  getGoogleDriveConfigHandler,
+  updateGoogleDriveConfigHandler,
+  syncSingleToDriveHandler,
+  syncAllToDriveHandler
 } from '../controllers/challanController.js';
 
 const router = Router();
 
+// Google Drive Sync Routes (swastikelegance065@gmail.com)
+router.get('/challans/drive/config', getGoogleDriveConfigHandler);
+router.post('/challans/drive/config', updateGoogleDriveConfigHandler);
+router.post('/challans/drive/sync-all', syncAllToDriveHandler);
+router.post('/challans/:id/sync-drive', syncSingleToDriveHandler);
+
+// Standard Challan Routes
 router.get('/challans', listChallans);
 router.get('/challans/date-summary', getDateWiseSummary);
 router.get('/challans/summary', getDateWiseSummary);

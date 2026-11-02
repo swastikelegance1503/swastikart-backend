@@ -68,6 +68,10 @@ export async function createProfile(req, res) {
       });
     }
 
+    if (isDefault) {
+      await Profile.updateMany({}, { isDefault: false });
+    }
+
     const profile = await Profile.create({
       user: req.user ? req.user.id : undefined,
       firmName: firmName.trim(),
@@ -131,6 +135,10 @@ export async function updateProfile(req, res) {
         profile[field] = req.body[field];
       }
     });
+
+    if (req.body.isDefault === true) {
+      await Profile.updateMany({ _id: { $ne: req.params.id } }, { isDefault: false });
+    }
 
     await profile.save();
 
