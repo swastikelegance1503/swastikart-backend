@@ -118,7 +118,16 @@ export async function syncChallanToGoogleDrive(challan) {
       result = { raw: responseText };
     }
 
-    if (response.ok && (result.success !== false)) {
+    // Check for Google Apps Script Permission / Login redirect errors
+    const isHtmlResponse = typeof responseText === 'string' && (
+      responseText.trim().startsWith('<') ||
+      responseText.includes('<!DOCTYPE') ||
+      responseText.includes('<html') ||
+      responseText.includes('Sorry, unable to open') ||
+      responseText.includes('accounts.google.com')
+    );
+
+    if (response.ok && !isHtmlResponse && (result.success !== false)) {
       console.log(`✅ Bill #${challanObj.billNo} successfully saved to Google Drive & Google Sheet!`);
 
       // Update Challan in MongoDB
@@ -138,11 +147,20 @@ export async function syncChallanToGoogleDrive(challan) {
         message: 'ગૂગલ ડ્રાઇવ અને શીટમાં સફળતાપૂર્વક સેવ થઈ ગયું!'
       };
     } else {
-      console.error('❌ Google Drive Webhook returned error:', result);
+      console.error('❌ Google Drive Webhook returned error. Status:', response.status);
+
+      let cleanErrorMessage = 'Google Drive માં સિંક કરતી વખતે ભૂલ આવી.';
+
+      if (response.status === 401 || isHtmlResponse) {
+        cleanErrorMessage = "Google Apps Script Access પરમિશન ભૂલ: Apps Script માં 'Deploy' > 'Manage deployments' > ✏️ Edit > 'Who has access' ને 'Anyone' (કોઈપણ વ્યક્તિ) પર સેટ કરીને 'New version' Deploy કરો.";
+      } else if (result.error) {
+        cleanErrorMessage = typeof result.error === 'string' ? result.error.replace(/<[^>]*>/g, '') : JSON.stringify(result.error);
+      }
+
       return {
         success: false,
         configured: true,
-        error: result.error || responseText || 'Unknown error'
+        error: cleanErrorMessage
       };
     }
   } catch (error) {
