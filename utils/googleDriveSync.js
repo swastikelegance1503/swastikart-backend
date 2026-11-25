@@ -172,3 +172,75 @@ export async function syncChallanToGoogleDrive(challan) {
     };
   }
 }
+
+/**
+ * Delete a Challan from Google Drive and Google Sheet
+ */
+export async function deleteChallanFromGoogleDrive(challan) {
+  try {
+    const config = await getDriveConfig();
+
+    if (!config.webhookUrl || !config.webhookUrl.trim().startsWith('http')) {
+      console.log('ℹ️ Google Drive Webhook URL is not configured yet. Skipping delete sync.');
+      return {
+        success: false,
+        configured: false,
+        message: 'Google Drive Webhook URL is not configured yet.'
+      };
+    }
+
+    const challanObj = typeof challan.toObject === 'function' ? challan.toObject() : challan;
+    const cleanFirmName = (challanObj.firmName || 'Firm').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const cleanMerchantName = (challanObj.merchantName || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Bill_${challanObj.billNo || '0'}_${cleanFirmName}_${cleanMerchantName}.html`;
+
+    const payload = {
+      action: 'DELETE_CHALLAN',
+      driveEmail: config.email || 'swastikelegance065@gmail.com',
+      challanId: String(challanObj._id),
+      billNo: String(challanObj.billNo || ''),
+      challanNo: String(challanObj.challanNo || challanObj.billNo || ''),
+      firmName: challanObj.firmName || '',
+      fileName
+    };
+
+    console.log(`🗑️ Sending Delete Bill #${challanObj.billNo} (${challanObj.firmName}) to Google Drive Webhook...`);
+
+    const response = await fetch(config.webhookUrl.trim(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+
+    const responseText = await response.text();
+    let result = {};
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { raw: responseText };
+    }
+
+    if (response.ok && result.success !== false) {
+      console.log(`✅ Bill #${challanObj.billNo} successfully removed from Google Drive & Sheet!`);
+      return {
+        success: true,
+        message: 'Google Drive અને Sheet માંથી સફળતાપૂર્વક ડિલીટ થઈ ગયું!'
+      };
+    } else {
+      console.warn('⚠️ Google Drive delete webhook response:', response.status, result);
+      return {
+        success: false,
+        message: result.error || 'Google Drive delete webhook failed'
+      };
+    }
+  } catch (error) {
+    console.error('❌ Error deleting from Google Drive:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}

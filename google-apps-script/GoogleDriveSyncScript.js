@@ -42,6 +42,58 @@ function doPost(e) {
       folder.setDescription("Swastik Art and Astha Fashion Automated Challans & Bills Backup");
     }
 
+    // ------------------------------------------------------------------------
+    // એક્શન ૧: બિલ ડિલીટ કરવું (DELETE_CHALLAN)
+    // ------------------------------------------------------------------------
+    if (data.action === "DELETE_CHALLAN") {
+      let rowDeleted = false;
+      let fileDeleted = false;
+
+      // ૧. સ્પ્રેડશીટમાંથી તે બિલની રો ડિલીટ કરવી
+      const sheetFileIter = folder.getFilesByName(sheetName);
+      if (sheetFileIter.hasNext()) {
+        const spreadsheet = SpreadsheetApp.open(sheetFileIter.next());
+        const sheet = spreadsheet.getActiveSheet();
+        const values = sheet.getDataRange().getValues();
+
+        // છેલ્લેથી શરૂ કરીને ઉપર તરફ લૂપ (જેથી રો ઇન્ડેક્સ ખોટો ન થાય)
+        for (let i = values.length - 1; i >= 1; i--) {
+          const rowBillNo = String(values[i][1]).trim();
+          const rowFirmName = String(values[i][3]).trim().toLowerCase();
+          const targetBillNo = String(data.billNo).trim();
+          const targetFirmName = String(data.firmName || "").trim().toLowerCase();
+
+          // બિલ નંબર અને પેઢી બંને મેચ થાય ત્યારે જ ડિલીટ કરવું
+          if (rowBillNo === targetBillNo && (!targetFirmName || rowFirmName === targetFirmName)) {
+            sheet.deleteRow(i + 1);
+            rowDeleted = true;
+          }
+        }
+      }
+
+      // ૨. Google Drive માંથી બિલની ફાઈલ Trash માં નાખવી
+      if (data.fileName) {
+        const fileIter = folder.getFilesByName(data.fileName);
+        while (fileIter.hasNext()) {
+          fileIter.next().setTrashed(true);
+          fileDeleted = true;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        action: "DELETE_CHALLAN",
+        billNo: data.billNo,
+        firmName: data.firmName,
+        rowDeleted: rowDeleted,
+        fileDeleted: fileDeleted,
+        message: rowDeleted ? "બિલ સફળતાપૂર્વક Google Sheet માંથી ડિલીટ થઈ ગયું!" : "બિલ Google Sheet માં મળ્યું નથી"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ------------------------------------------------------------------------
+    // એક્શન ૨: બિલ સેવ / અપડેટ કરવું (SAVE_CHALLAN)
+    // ------------------------------------------------------------------------
     // 2. બિલ HTML / PDF ફાઈલ Drive ફોલ્ડરમાં સેવ કરવી
     const fileName = data.fileName || ("Bill_" + (data.billNo || "0") + "_" + (data.firmName || "Firm") + ".html");
     const blob = Utilities.newBlob(data.htmlContent || "", "text/html", fileName);

@@ -5,6 +5,7 @@ import { DEFAULT_PROFILES } from '../config/defaultProfiles.js';
 import { generateChallanPrintHtml } from '../utils/printTemplate.js';
 import {
   syncChallanToGoogleDrive,
+  deleteChallanFromGoogleDrive,
   getDriveConfig,
   updateDriveConfig
 } from '../utils/googleDriveSync.js';
@@ -517,6 +518,11 @@ export async function deleteChallan(req, res) {
         message: 'ચલણ મળ્યું નથી (Challan not found)'
       });
     }
+
+    // Google Drive & Google Sheet માંથી પણ બિલની રો અને ફાઇલ ડિલીટ કરો
+    deleteChallanFromGoogleDrive(challan).catch((syncErr) => {
+      console.warn('Background Google Drive delete warning:', syncErr.message);
+    });
 
     return res.json({
       success: true,
