@@ -8,6 +8,7 @@ import workerRoutes from './routes/workerRoutes.js';
 import merchantRoutes from './routes/merchantRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import challanRoutes from './routes/challanRoutes.js';
+import deliveryChallanRoutes from './routes/deliveryChallanRoutes.js';
 import machineRoutes from './routes/machineRoutes.js';
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api', workerRoutes);
 app.use('/api', merchantRoutes);
 app.use('/api', profileRoutes);
 app.use('/api', challanRoutes);
+app.use('/api', deliveryChallanRoutes);
 app.use('/api', machineRoutes);
 
 export default app;
