@@ -39,16 +39,16 @@ export function generateDeliveryChallanPrintHtml(challan) {
     formattedDate = `${day}/${month}/${year}`;
   }
 
-  // Items Table Rows: 5 rows per slip allows 2 copies on a single A4 page
+  // Items Table Rows: 9 rows per slip gives an authentic challan pad look and fits 2 copies on a single A4 page
   const items = challan.items || [];
-  const minRows = Math.max(items.length, 5);
+  const minRows = Math.max(items.length, 9);
   let rowsHtml = '';
 
   for (let i = 0; i < minRows; i++) {
     const item = items[i];
     if (item) {
       rowsHtml += `
-        <tr style="height: 20px;">
+        <tr style="height: 22px;">
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 10.5px; font-weight: bold; color: #222; padding: 1px 2px; white-space: nowrap;">${item.srNo || i + 1}</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; padding: 1px 6px; font-size: 11px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;">${item.particulars || ''}</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 11px; font-weight: bold; color: #111; padding: 1px 2px; white-space: nowrap;">${item.qty || ''}</td>
@@ -58,7 +58,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
       `;
     } else {
       rowsHtml += `
-        <tr style="height: 20px;">
+        <tr style="height: 22px;">
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
@@ -183,7 +183,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
   <style>
     @page {
       size: A4 portrait;
-      margin: 6mm 8mm;
+      margin: 5mm 6mm;
     }
     * {
       box-sizing: border-box;
@@ -194,7 +194,6 @@ export function generateDeliveryChallanPrintHtml(challan) {
       margin: 0;
       padding: 0;
       width: 100%;
-      height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: #fff;
       color: #000;
@@ -207,9 +206,12 @@ export function generateDeliveryChallanPrintHtml(challan) {
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      height: 100%;
-      min-height: 100%;
+    }
+    .slip-wrapper {
+      width: 100%;
+      box-sizing: border-box;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .challan-slip {
       width: 100%;
@@ -219,9 +221,8 @@ export function generateDeliveryChallanPrintHtml(challan) {
       background: #fff;
       position: relative;
       box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .watermark-bg {
       position: absolute;
@@ -419,8 +420,10 @@ export function generateDeliveryChallanPrintHtml(challan) {
       align-items: center;
       justify-content: center;
       position: relative;
-      margin: 4px 0;
+      margin: 6px 0;
       padding: 2px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .cut-line {
       flex: 1;
@@ -440,13 +443,23 @@ export function generateDeliveryChallanPrintHtml(challan) {
       white-space: nowrap;
     }
     @media print {
-      body {
-        background: #fff !important;
-        padding: 0 !important;
+      html, body {
+        width: 100% !important;
+        height: auto !important;
         margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
       }
       .a4-sheet {
+        width: 100% !important;
         max-width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .slip-wrapper, .challan-slip, .cut-divider {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
     }
   </style>
@@ -454,7 +467,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
 <body>
   <div class="a4-sheet">
     <!-- TOP HALF: FIRST COPY -->
-    <div style="display: flex; flex-direction: column;">
+    <div class="slip-wrapper">
       ${renderSingleSlip('First Copy', 'Original')}
     </div>
 
@@ -470,7 +483,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
     </div>
 
     <!-- BOTTOM HALF: SECOND COPY -->
-    <div style="display: flex; flex-direction: column;">
+    <div class="slip-wrapper">
       ${renderSingleSlip('Second Copy', 'Duplicate')}
     </div>
   </div>
