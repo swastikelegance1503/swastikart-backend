@@ -8,11 +8,11 @@ export function generateDeliveryChallanPrintHtml(challan) {
   const isAstha = firmName.toLowerCase().includes('astha');
 
   const firmTitle = isAstha ? 'Astha Fashion' : 'Swastik Art';
-  const firmAddress = '66, 67, 3rd Floor, R.K. Industries, Kapodra, Varachha Road, Surat';
+  const firmAddress = '66,67, 3rd Floor, R.K. Industries, Kapodra, Varachha Road, Surat';
   const firmMobiles = ['98255 85058', '99045 84177'];
   const firmPan = 'BKJPS1499H';
 
-  // Format Date
+  // Format Date (DD/MM/YYYY)
   let formattedDate = '';
   if (challan.date) {
     const d = new Date(challan.date);
@@ -22,35 +22,45 @@ export function generateDeliveryChallanPrintHtml(challan) {
     formattedDate = `${day}/${month}/${year}`;
   }
 
-  // Generate Items Table Rows (minimum 8 rows for traditional slip aesthetic)
+  // Items Table Rows (min 7 rows for authentic physical slip height)
   const items = challan.items || [];
-  const minRows = Math.max(items.length, 8);
+  const minRows = Math.max(items.length, 7);
   let rowsHtml = '';
 
   for (let i = 0; i < minRows; i++) {
     const item = items[i];
     if (item) {
       rowsHtml += `
-        <tr style="height: 28px;">
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a; text-align: center; font-size: 13px; font-weight: bold; color: #333;">${item.srNo || i + 1}</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a; padding: 4px 8px; font-size: 13px; font-weight: 600; color: #111;">${item.particulars || ''}</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a; text-align: center; font-size: 13px; font-weight: bold; color: #111;">${item.qty || ''}</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a; text-align: right; padding-right: 8px; font-size: 13px; color: #333;">${item.rate ? Number(item.rate).toFixed(2) : ''}</td>
-          <td style="border-bottom: 1px solid #ef9a9a; text-align: right; padding-right: 8px; font-size: 13px; font-weight: bold; color: #111;">${item.amount ? Number(item.amount).toFixed(2) : ''}</td>
+        <tr style="height: 23px;">
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 11.5px; font-weight: bold; color: #222; padding: 2px;">${item.srNo || i + 1}</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; padding: 2px 6px; font-size: 11.5px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px;">${item.particulars || ''}</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 12px; font-weight: bold; color: #111; padding: 2px; white-space: nowrap;">${item.qty || ''}</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: right; padding: 2px 6px; font-size: 11.5px; color: #222; white-space: nowrap;">${item.rate ? Number(item.rate).toFixed(2) : ''}</td>
+          <td style="border-bottom: 1px solid #ffcdd2; text-align: right; padding: 2px 6px; font-size: 12px; font-weight: bold; color: #111; white-space: nowrap;">${item.amount ? Number(item.amount).toFixed(2) : ''}</td>
         </tr>
       `;
     } else {
       rowsHtml += `
-        <tr style="height: 28px;">
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a;">&nbsp;</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a;">&nbsp;</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a;">&nbsp;</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ef9a9a;">&nbsp;</td>
-          <td style="border-bottom: 1px solid #ef9a9a;">&nbsp;</td>
+        <tr style="height: 23px;">
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
+          <td style="border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
         </tr>
       `;
     }
   }
+
+  const logoMarkup = isAstha
+    ? `<div style="border: 1.5px solid #c62828; border-radius: 16px; padding: 3px 10px; display: inline-flex; align-items: center; gap: 4px; background: #fff;">
+        <span style="border: 1.5px solid #c62828; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #c62828;">AF</span>
+        <span style="font-size: 18px; font-weight: 900; color: #c62828; letter-spacing: -0.3px;">Astha <span style="font-weight: 500;">Fashion</span></span>
+       </div>`
+    : `<div style="border: 1.5px solid #c62828; border-radius: 16px; padding: 3px 10px; display: inline-flex; align-items: center; gap: 4px; background: #fff;">
+        <span style="border: 1.5px solid #c62828; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: #c62828;">卐</span>
+        <span style="font-size: 19px; font-weight: 900; color: #c62828; letter-spacing: -0.5px;">Swastik<span style="font-weight: 500; margin-left: 2px;">Art</span></span>
+       </div>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -60,183 +70,192 @@ export function generateDeliveryChallanPrintHtml(challan) {
   <style>
     @page {
       size: A5 portrait;
-      margin: 8mm;
+      margin: 6mm 8mm;
     }
     * {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
       background: #fff;
       color: #000;
     }
     .challan-container {
       width: 100%;
-      max-width: 580px;
+      max-width: 500px;
       margin: 0 auto;
-      border: 2px solid #c62828;
+      border: 1.5px solid #c62828;
       border-radius: 4px;
-      padding: 8px 10px;
+      padding: 6px 8px;
       background: #fff;
       position: relative;
     }
     .watermark {
       position: absolute;
-      top: 52%;
+      top: 55%;
       left: 50%;
       transform: translate(-50%, -50%) rotate(-25deg);
-      font-size: 56px;
-      font-weight: bold;
-      color: rgba(198, 40, 40, 0.06);
+      font-size: 44px;
+      font-weight: 900;
+      color: rgba(198, 40, 40, 0.04);
       pointer-events: none;
       white-space: nowrap;
       z-index: 0;
-      letter-spacing: 4px;
+      letter-spacing: 3px;
     }
-    .header-top {
+    .top-badge {
+      display: inline-block;
+      border: 1px solid #c62828;
+      color: #c62828;
+      font-size: 9px;
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .header-layout {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid #c62828;
     }
-    .badge-challan {
-      border: 1.5px solid #c62828;
-      color: #c62828;
-      font-size: 11px;
-      font-weight: bold;
-      padding: 2px 8px;
-      border-radius: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .header-left {
+      flex: 1;
+      padding-top: 2px;
     }
-    .mobiles {
-      font-size: 11px;
-      font-weight: bold;
-      color: #c62828;
+    .header-right {
       text-align: right;
-      line-height: 1.3;
-    }
-    .brand-title {
-      text-align: center;
-      margin-top: -6px;
-      margin-bottom: 2px;
-    }
-    .brand-title h1 {
-      margin: 0;
-      font-size: 26px;
-      font-weight: 900;
-      color: #c62828;
-      letter-spacing: 1px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .brand-subtitle {
-      font-size: 11px;
-      font-style: italic;
-      color: #c62828;
-      font-weight: 600;
-      margin-top: 1px;
-      text-align: center;
-    }
-    .brand-address {
       font-size: 10px;
       color: #c62828;
+      line-height: 1.25;
       font-weight: 600;
-      text-align: center;
-      margin-top: 2px;
-      padding-bottom: 6px;
-      border-bottom: 2px solid #c62828;
+      white-space: nowrap;
+    }
+    .header-right .mobiles {
+      font-weight: bold;
+      font-size: 10.5px;
+      margin-bottom: 1px;
+    }
+    .header-right .tagline {
+      font-style: italic;
+      color: #b71c1c;
+      font-size: 10px;
+      margin-top: 1px;
+    }
+    .header-right .address {
+      font-size: 9px;
+      color: #c62828;
+      margin-top: 1px;
     }
     .party-meta-grid {
       display: flex;
-      border-bottom: 2px solid #c62828;
+      border-bottom: 1.5px solid #c62828;
       margin-bottom: 0px;
     }
-    .party-info {
-      flex: 1.3;
-      padding: 6px 8px 6px 0;
-      border-right: 2px solid #c62828;
-      font-size: 12px;
-      line-height: 1.45;
+    .party-section {
+      flex: 1.35;
+      padding: 3px 6px 3px 0;
+      font-size: 11px;
     }
-    .party-name {
-      font-size: 14px;
-      font-weight: bold;
-      color: #111;
+    .party-line {
+      display: flex;
+      align-items: flex-end;
+      border-bottom: 1px solid #c62828;
+      padding-bottom: 1px;
+      margin-bottom: 3px;
+      min-height: 17px;
     }
-    .meta-info {
-      flex: 0.9;
-      padding: 6px 0 6px 8px;
-      font-size: 12px;
+    .meta-section {
+      flex: 0.95;
+      border-left: 1.5px solid #c62828;
+      padding: 3px 0 3px 6px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
-    .meta-row {
+    .meta-line {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 4px;
+      border-bottom: 1px solid #c62828;
+      padding-bottom: 1px;
+      margin-bottom: 3px;
+      white-space: nowrap;
     }
-    .meta-row:last-child {
+    .meta-line:last-child {
+      border-bottom: none;
       margin-bottom: 0;
-    }
-    .ch-no {
-      font-size: 17px;
-      font-weight: 900;
-      color: #c62828;
     }
     .table-container {
       width: 100%;
       border-collapse: collapse;
       position: relative;
       z-index: 1;
+      font-size: 11.5px;
     }
     .table-header {
       background-color: #c62828 !important;
       color: #ffffff !important;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
       text-transform: uppercase;
-      height: 26px;
+      height: 24px;
+      white-space: nowrap;
     }
     .table-header th {
       border-right: 1.5px solid #ffffff;
-      padding: 4px 6px;
+      padding: 2px 4px;
     }
     .table-header th:last-child {
       border-right: none;
     }
-    .summary-bar {
+    .summary-box {
       background-color: #c62828 !important;
       color: #ffffff !important;
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: bold;
       text-align: center;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
     }
-    .footer-section {
-      margin-top: 8px;
+    .footer-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 5px;
+      font-size: 10.5px;
+      font-weight: bold;
+      color: #c62828;
+      white-space: nowrap;
+    }
+    .footer-signs {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      font-size: 11px;
+      margin-top: 22px;
+      font-size: 10.5px;
       font-weight: bold;
       color: #c62828;
-      padding-top: 6px;
+      white-space: nowrap;
     }
-    .signatures {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-top: 36px;
-      font-size: 11px;
-      font-weight: bold;
-      color: #c62828;
+    @media screen {
+      body {
+        padding: 6px;
+        background: transparent;
+        display: flex;
+        justify-content: center;
+      }
+      .challan-container {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      }
     }
   </style>
 </head>
@@ -244,44 +263,55 @@ export function generateDeliveryChallanPrintHtml(challan) {
   <div class="challan-container">
     <div class="watermark">${firmTitle.toUpperCase()}</div>
 
-    <!-- Top Badge & Phone -->
-    <div class="header-top">
-      <div class="badge-challan">Delivery Challan</div>
-      <div class="mobiles">
-        Mo. ${firmMobiles[0]}<br>
-        Mo. ${firmMobiles[1]}
+    <!-- Top Badge -->
+    <div>
+      <span class="top-badge">Delivery Challan</span>
+    </div>
+
+    <!-- Header: Logo + Contact/Address -->
+    <div class="header-layout">
+      <div class="header-left">
+        ${logoMarkup}
+      </div>
+      <div class="header-right">
+        <div class="mobiles">
+          Mo. ${firmMobiles[0]}<br>
+          Mo. ${firmMobiles[1]}
+        </div>
+        <div class="tagline">All Type of sequence Embroidery Job Work</div>
+        <div class="address">${firmAddress}</div>
       </div>
     </div>
 
-    <!-- Firm Header -->
-    <div class="brand-title">
-      <h1>
-        <span style="border: 2px solid #c62828; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 2px;">卐</span>
-        ${firmTitle}
-      </h1>
-      <div class="brand-subtitle">All Type of sequence Embroidery Job Work</div>
-      <div class="brand-address">${firmAddress}</div>
-    </div>
-
-    <!-- Party & Challan Meta -->
+    <!-- Party & Challan Meta Grid -->
     <div class="party-meta-grid">
-      <div class="party-info">
-        <div style="color: #c62828; font-weight: bold; margin-bottom: 2px;">M/s. <span class="party-name">${challan.merchantName || ''}</span></div>
-        <div style="color: #444;">${challan.merchantAddress || ''}</div>
-        <div style="color: #c62828; font-weight: bold; margin-top: 4px;">City: <span style="color: #111; font-weight: 600;">${challan.merchantCity || 'Surat'}</span></div>
+      <div class="party-section">
+        <div class="party-line">
+          <span style="color: #c62828; font-weight: bold; width: 32px; white-space: nowrap;">M/s.</span>
+          <span style="font-weight: bold; font-size: 12.5px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantName || ''}</span>
+        </div>
+        <div class="party-line">
+          <span style="font-size: 11px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantAddress || ''}</span>
+        </div>
+        <div class="party-line" style="border-bottom: none; margin-bottom: 0;">
+          <span style="flex: 1;"></span>
+          <span style="color: #c62828; font-weight: bold; margin-right: 4px; white-space: nowrap;">City:</span>
+          <span style="font-weight: bold; font-size: 11.5px; color: #111; white-space: nowrap;">${challan.merchantCity || 'Surat'}</span>
+        </div>
       </div>
-      <div class="meta-info">
-        <div class="meta-row">
+
+      <div class="meta-section">
+        <div class="meta-line">
           <span style="color: #c62828; font-weight: bold;">Ch.No. :</span>
-          <span class="ch-no">${challan.challanNo || ''}</span>
+          <span style="font-size: 16px; font-weight: 900; color: #c62828; font-family: monospace;">${challan.challanNo || ''}</span>
         </div>
-        <div class="meta-row">
+        <div class="meta-line">
           <span style="color: #c62828; font-weight: bold;">Date :</span>
-          <span style="font-weight: bold; color: #111;">${formattedDate}</span>
+          <span style="font-weight: bold; font-size: 11.5px; color: #111;">${formattedDate}</span>
         </div>
-        <div class="meta-row">
+        <div class="meta-line">
           <span style="color: #c62828; font-weight: bold;">P.Ch.No. :</span>
-          <span style="font-weight: bold; color: #111;">${challan.pChallanNo || '-'}</span>
+          <span style="font-weight: bold; font-size: 11.5px; color: #111;">${challan.pChallanNo || '-'}</span>
         </div>
       </div>
     </div>
@@ -290,24 +320,24 @@ export function generateDeliveryChallanPrintHtml(challan) {
     <table class="table-container">
       <thead>
         <tr class="table-header">
-          <th style="width: 38px; text-align: center;">No.</th>
-          <th style="text-align: left; padding-left: 8px;">Particulars</th>
-          <th style="width: 75px; text-align: center;">Qty/Pcs.</th>
-          <th style="width: 65px; text-align: right; padding-right: 8px;">Rate</th>
-          <th style="width: 85px; text-align: right; padding-right: 8px;">Amount</th>
+          <th style="width: 34px; text-align: center;">No.</th>
+          <th style="text-align: left; padding-left: 6px;">Particulars</th>
+          <th style="width: 72px; text-align: center;">Qty/Pcs.</th>
+          <th style="width: 62px; text-align: right; padding-right: 6px;">Rate</th>
+          <th style="width: 82px; text-align: right; padding-right: 6px;">Amount</th>
         </tr>
       </thead>
       <tbody>
         ${rowsHtml}
         <!-- Summary Row -->
-        <tr style="height: 28px; border-top: 2px solid #c62828; border-bottom: 2px solid #c62828;">
+        <tr style="height: 24px; border-top: 1.5px solid #c62828; border-bottom: 1.5px solid #c62828;">
           <td style="border-right: 1.5px solid #c62828; background: #fff;"></td>
-          <td class="summary-bar" style="border-right: 1.5px solid #fff;">Total</td>
-          <td style="border-right: 1.5px solid #c62828; text-align: center; font-size: 14px; font-weight: 900; color: #c62828; background: #fff;">
+          <td class="summary-box" style="border-right: 1.5px solid #fff;">Total</td>
+          <td style="border-right: 1.5px solid #c62828; text-align: center; font-size: 12.5px; font-weight: 900; color: #111; background: #fff; white-space: nowrap; padding: 2px;">
             ${challan.totalQty || 0}
           </td>
-          <td class="summary-bar" style="border-right: 1.5px solid #fff;">Net. Amo.</td>
-          <td style="text-align: right; padding-right: 8px; font-size: 14px; font-weight: 900; color: #c62828; background: #fff;">
+          <td class="summary-box" style="border-right: 1.5px solid #fff;">Net. Amo.</td>
+          <td style="text-align: right; padding-right: 6px; font-size: 12.5px; font-weight: 900; color: #111; background: #fff; white-space: nowrap;">
             ₹ ${(challan.netAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </td>
         </tr>
@@ -315,13 +345,13 @@ export function generateDeliveryChallanPrintHtml(challan) {
     </table>
 
     <!-- Footer -->
-    <div class="footer-section">
-      <div>PAN NO.: <span style="color: #111;">${firmPan}</span></div>
-      <div style="font-size: 13px;">For, ${firmTitle}</div>
+    <div class="footer-meta">
+      <div>PAN NO.: <span style="color: #111; letter-spacing: 0.5px;">${firmPan}</span></div>
+      <div style="font-size: 11.5px;">For, ${firmTitle}</div>
     </div>
 
-    <div class="signatures">
-      <div>Receiver Sign...........................</div>
+    <div class="footer-signs">
+      <div style="color: #333;">Receiver Sign...........................</div>
       <div>Propriter/Authority</div>
     </div>
   </div>

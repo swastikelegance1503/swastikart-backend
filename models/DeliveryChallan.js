@@ -154,3 +154,4 @@ deliveryChallanSchema.index({ merchantName: 1 });
 
 const DeliveryChallan = mongoose.model('DeliveryChallan', deliveryChallanSchema);
 export default DeliveryChallan;
+

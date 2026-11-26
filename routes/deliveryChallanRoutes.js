@@ -20,3 +20,4 @@ router.delete('/delivery-challans/:id', deleteDeliveryChallan);
 router.get('/delivery-challans/:id/print', printDeliveryChallan);
 
 export default router;
+
