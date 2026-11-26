@@ -10,8 +10,10 @@ function formatCurrency(val) {
 
 /**
  * Delivery Challan Print HTML Generator (Backend)
- * Matches the physical red challan book of Swastik Art and Astha Fashion
- * Specifically designed for Half A4 Page (A5 Portrait: 148mm x 210mm)
+ * Required Layout: A4 Portrait (210 x 297 mm) with 2 Challan Copies
+ * - Top Half: First Copy (Original)
+ * - Middle: "--- ✂ CUT HERE ✂ ---" dashed separator line
+ * - Bottom Half: Second Copy (Duplicate)
  */
 export function generateDeliveryChallanPrintHtml(challan) {
   const firmName = challan.firmName || 'Swastik Art';
@@ -37,26 +39,26 @@ export function generateDeliveryChallanPrintHtml(challan) {
     formattedDate = `${day}/${month}/${year}`;
   }
 
-  // Items Table Rows (11 rows fills Half A4 Page)
+  // Items Table Rows: 5 rows per slip allows 2 copies on a single A4 page
   const items = challan.items || [];
-  const minRows = Math.max(items.length, 11);
+  const minRows = Math.max(items.length, 5);
   let rowsHtml = '';
 
   for (let i = 0; i < minRows; i++) {
     const item = items[i];
     if (item) {
       rowsHtml += `
-        <tr style="height: 24px;">
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 11px; font-weight: bold; color: #222; padding: 2px; white-space: nowrap;">${item.srNo || i + 1}</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; padding: 2px 8px; font-size: 12px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">${item.particulars || ''}</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 12px; font-weight: bold; color: #111; padding: 2px; white-space: nowrap;">${item.qty || ''}</td>
-          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: right; padding: 2px 8px; font-size: 11.5px; color: #222; white-space: nowrap;">${item.rate ? Number(item.rate).toFixed(2) : ''}</td>
-          <td style="border-bottom: 1px solid #ffcdd2; text-align: right; padding: 2px 8px; font-size: 12px; font-weight: bold; color: #111; white-space: nowrap;">${item.amount ? Number(item.amount).toFixed(2) : ''}</td>
+        <tr style="height: 20px;">
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 10.5px; font-weight: bold; color: #222; padding: 1px 2px; white-space: nowrap;">${item.srNo || i + 1}</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; padding: 1px 6px; font-size: 11px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;">${item.particulars || ''}</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 11px; font-weight: bold; color: #111; padding: 1px 2px; white-space: nowrap;">${item.qty || ''}</td>
+          <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: right; padding: 1px 6px; font-size: 11px; color: #222; white-space: nowrap;">${item.rate ? Number(item.rate).toFixed(2) : ''}</td>
+          <td style="border-bottom: 1px solid #ffcdd2; text-align: right; padding: 1px 6px; font-size: 11px; font-weight: bold; color: #111; white-space: nowrap;">${item.amount ? Number(item.amount).toFixed(2) : ''}</td>
         </tr>
       `;
     } else {
       rowsHtml += `
-        <tr style="height: 24px;">
+        <tr style="height: 20px;">
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
@@ -67,15 +69,121 @@ export function generateDeliveryChallanPrintHtml(challan) {
     }
   }
 
+  // Generates markup for a single slip (First Copy or Second Copy)
+  const renderSingleSlip = (copyLabel, copySubtitle) => `
+    <div class="challan-slip">
+      <!-- Watermark Logo -->
+      <div class="watermark-bg"></div>
+
+      <!-- Header: Top Badges + Logo + Contact -->
+      <div class="header-layout">
+        <div class="header-left">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+            <span class="top-badge">Delivery Challan</span>
+            <span class="copy-badge">${copySubtitle}</span>
+          </div>
+          <img src="${logoBase64}" style="max-height: 40px; max-width: 190px; object-fit: contain; display: block;" alt="${firmTitle}" />
+        </div>
+        <div class="header-right">
+          <div class="mobiles">
+            Mo. ${firmMobiles[0]}<br>
+            Mo. ${firmMobiles[1]}
+          </div>
+          <div class="tagline">All Type of sequence Embroidery Job Work</div>
+          <div class="address">${firmAddress}</div>
+        </div>
+      </div>
+
+      <!-- Party & Challan Meta Grid -->
+      <div class="party-meta-grid">
+        <div class="party-section">
+          <div class="party-line">
+            <span style="color: #c62828; font-weight: 800; width: 32px; white-space: nowrap; font-size: 11px;">M/s.</span>
+            <span style="font-weight: 800; font-size: 12px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantName || ''}</span>
+          </div>
+          <div class="party-line">
+            <span style="font-size: 10px; font-weight: 600; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantAddress || ''}</span>
+          </div>
+          <div class="party-line" style="border-bottom: none; margin-bottom: 0;">
+            <span style="flex: 1;"></span>
+            <span style="color: #c62828; font-weight: 800; margin-right: 4px; white-space: nowrap; font-size: 10.5px;">City:</span>
+            <span style="font-weight: 800; font-size: 10.5px; color: #111; white-space: nowrap;">${challan.merchantCity || 'Surat'}</span>
+          </div>
+        </div>
+
+        <div class="meta-section">
+          <div class="meta-line">
+            <span style="color: #c62828; font-weight: 800; font-size: 10.5px;">Ch.No. :</span>
+            <span style="font-size: 14px; font-weight: 900; color: #c62828; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;">${challan.challanNo || ''}</span>
+          </div>
+          <div class="meta-line">
+            <span style="color: #c62828; font-weight: 800; font-size: 10.5px;">Date :</span>
+            <span style="font-weight: 800; font-size: 10.5px; color: #111;">${formattedDate}</span>
+          </div>
+          <div class="meta-line">
+            <span style="color: #c62828; font-weight: 800; font-size: 10.5px;">P.Ch.No. :</span>
+            <span style="font-weight: 700; font-size: 10.5px; color: #111;">${challan.pChallanNo || '-'}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <table class="table-container">
+        <thead>
+          <tr class="table-header">
+            <th style="width: 34px; text-align: center;">No.</th>
+            <th style="text-align: left; padding-left: 6px;">Particulars</th>
+            <th style="width: 68px; text-align: center;">Qty/Pcs.</th>
+            <th style="width: 62px; text-align: right; padding-right: 6px;">Rate</th>
+            <th style="width: 78px; text-align: right; padding-right: 6px;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+          <!-- Summary Row -->
+          <tr style="height: 22px; border-top: 1.5px solid #c62828; border-bottom: 1.5px solid #c62828;">
+            <td style="border-right: 1.5px solid #c62828; background: #fff;"></td>
+            <td class="summary-box" style="border-right: 1.5px solid #fff;">Total</td>
+            <td style="border-right: 1.5px solid #c62828; text-align: center; font-size: 11.5px; font-weight: 900; color: #111; background: #fff; white-space: nowrap; padding: 1px;">
+              ${challan.totalQty || 0}
+            </td>
+            <td class="summary-box" style="border-right: 1.5px solid #fff;">Net. Amo.</td>
+            <td style="text-align: right; padding-right: 6px; font-size: 12px; font-weight: 900; color: #111; background: #fff; white-space: nowrap;">
+              ₹ ${formatCurrency(challan.netAmount || 0)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Footer -->
+      <div style="margin-top: 4px;">
+        <div class="footer-meta">
+          <div>PAN NO.: <span style="color: #111; font-weight: 800; letter-spacing: 0.5px;">${firmPan}</span></div>
+          <div style="font-size: 10.5px; font-weight: 800;">For, ${firmTitle}</div>
+        </div>
+
+        <div class="footer-signs">
+          <div style="color: #333; font-weight: 700;">Receiver Sign...........................</div>
+          <div style="font-weight: 800; color: #c62828;">Propriter/Authority</div>
+        </div>
+      </div>
+
+      <!-- Copy Indicator Bar -->
+      <div class="slip-copy-footer">
+        ${copyLabel}
+      </div>
+    </div>
+  `;
+
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Delivery Challan - ${challan.challanNo || 'Challan'}</title>
+  <title>Delivery Challan - #${challan.challanNo || '1'} (2 Copies - A4)</title>
   <style>
     @page {
-      size: A5 portrait;
-      margin: 4mm 5mm;
+      size: A4 portrait;
+      margin: 6mm 8mm;
     }
     * {
       box-sizing: border-box;
@@ -92,13 +200,22 @@ export function generateDeliveryChallanPrintHtml(challan) {
       color: #000;
       -webkit-font-smoothing: antialiased;
     }
-    .challan-container {
+    .a4-sheet {
       width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
       min-height: 100%;
-      margin: 0;
-      border: 2px solid #c62828;
+    }
+    .challan-slip {
+      width: 100%;
+      border: 1.5px solid #c62828;
       border-radius: 2px;
-      padding: 6px 8px;
+      padding: 5px 8px 3px 8px;
       background: #fff;
       position: relative;
       box-sizing: border-box;
@@ -106,19 +223,18 @@ export function generateDeliveryChallanPrintHtml(challan) {
       flex-direction: column;
       justify-content: space-between;
     }
-    .challan-container::before {
-      content: "";
+    .watermark-bg {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 250px;
-      height: 250px;
+      width: 220px;
+      height: 220px;
       background-image: url('${logoBase64}');
       background-repeat: no-repeat;
       background-position: center;
       background-size: contain;
-      opacity: 0.05;
+      opacity: 0.04;
       pointer-events: none;
       z-index: 0;
     }
@@ -126,21 +242,32 @@ export function generateDeliveryChallanPrintHtml(challan) {
       display: inline-block;
       border: 1px solid #c62828;
       color: #c62828;
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 700;
-      padding: 1.5px 8px;
-      border-radius: 8px;
+      padding: 1px 6px;
+      border-radius: 6px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+    .copy-badge {
+      display: inline-block;
+      background: #c62828;
+      color: #ffffff;
+      font-size: 8px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       white-space: nowrap;
     }
     .header-layout {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 4px;
-      padding-bottom: 4px;
+      margin-bottom: 3px;
+      padding-bottom: 3px;
       border-bottom: 1.5px solid #c62828;
       position: relative;
       z-index: 1;
@@ -152,7 +279,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
     .header-right {
       flex: 1.2;
       text-align: right;
-      font-size: 10px;
+      font-size: 9.5px;
       color: #c62828;
       line-height: 1.25;
       font-weight: 600;
@@ -160,20 +287,20 @@ export function generateDeliveryChallanPrintHtml(challan) {
     }
     .header-right .mobiles {
       font-weight: 800;
-      font-size: 11px;
+      font-size: 10px;
       margin-bottom: 1px;
       white-space: nowrap;
     }
     .header-right .tagline {
       font-style: italic;
       color: #b71c1c;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
       margin-top: 1px;
       white-space: nowrap;
     }
     .header-right .address {
-      font-size: 9px;
+      font-size: 8px;
       color: #c62828;
       margin-top: 1px;
       white-space: nowrap;
@@ -187,22 +314,22 @@ export function generateDeliveryChallanPrintHtml(challan) {
     }
     .party-section {
       flex: 1.35;
-      padding: 2px 6px 2px 0;
-      font-size: 11.5px;
+      padding: 1px 5px 1px 0;
+      font-size: 11px;
     }
     .party-line {
       display: flex;
       align-items: flex-end;
-      border-bottom: 1.5px solid #c62828;
+      border-bottom: 1px solid #c62828;
       padding-bottom: 1px;
-      margin-bottom: 2px;
-      min-height: 18px;
+      margin-bottom: 1.5px;
+      min-height: 16px;
       white-space: nowrap;
     }
     .meta-section {
       flex: 0.95;
       border-left: 1.5px solid #c62828;
-      padding: 2px 0 2px 6px;
+      padding: 1px 0 1px 5px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -211,10 +338,10 @@ export function generateDeliveryChallanPrintHtml(challan) {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1.5px solid #c62828;
+      border-bottom: 1px solid #c62828;
       padding-bottom: 1px;
-      margin-bottom: 2px;
-      min-height: 18px;
+      margin-bottom: 1.5px;
+      min-height: 16px;
       white-space: nowrap;
     }
     .meta-line:last-child {
@@ -226,20 +353,20 @@ export function generateDeliveryChallanPrintHtml(challan) {
       border-collapse: collapse;
       position: relative;
       z-index: 1;
-      font-size: 11.5px;
+      font-size: 10.5px;
     }
     .table-header {
       background-color: #c62828 !important;
       color: #ffffff !important;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 800;
       text-transform: uppercase;
-      height: 24px;
+      height: 20px;
       white-space: nowrap;
     }
     .table-header th {
       border-right: 1.5px solid #ffffff;
-      padding: 2px 4px;
+      padding: 1px 4px;
     }
     .table-header th:last-child {
       border-right: none;
@@ -247,7 +374,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
     .summary-box {
       background-color: #c62828 !important;
       color: #ffffff !important;
-      font-size: 11.5px;
+      font-size: 10.5px;
       font-weight: 800;
       text-align: center;
       letter-spacing: 0.5px;
@@ -257,8 +384,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 5px;
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 800;
       color: #c62828;
       white-space: nowrap;
@@ -269,13 +395,49 @@ export function generateDeliveryChallanPrintHtml(challan) {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 18px;
-      font-size: 10.5px;
+      margin-top: 12px;
+      font-size: 9.5px;
       font-weight: 800;
       color: #c62828;
       white-space: nowrap;
       position: relative;
       z-index: 1;
+    }
+    .slip-copy-footer {
+      text-align: center;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #c62828;
+      margin-top: 3px;
+      padding-top: 2px;
+      border-top: 0.5px dotted #fca5a5;
+    }
+    .cut-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin: 4px 0;
+      padding: 2px 0;
+    }
+    .cut-line {
+      flex: 1;
+      border-top: 1.5px dashed #c62828;
+      height: 1px;
+    }
+    .cut-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      background: #fff;
+      color: #c62828;
+      font-size: 9.5px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      white-space: nowrap;
     }
     @media print {
       body {
@@ -283,108 +445,33 @@ export function generateDeliveryChallanPrintHtml(challan) {
         padding: 0 !important;
         margin: 0 !important;
       }
-      .challan-container {
-        border: 2px solid #c62828 !important;
+      .a4-sheet {
+        max-width: 100% !important;
       }
     }
   </style>
 </head>
 <body>
-  <div class="challan-container">
-    <div>
-      <!-- Top Badge -->
-      <div>
-        <span class="top-badge">Delivery Challan</span>
-      </div>
-
-      <!-- Header: Official Logo + Contact/Address -->
-      <div class="header-layout">
-        <div class="header-left">
-          <img src="${logoBase64}" style="max-height: 48px; max-width: 210px; object-fit: contain; display: block;" alt="${firmTitle}" />
-        </div>
-        <div class="header-right">
-          <div class="mobiles">
-            Mo. ${firmMobiles[0]}<br>
-            Mo. ${firmMobiles[1]}
-          </div>
-          <div class="tagline">All Type of sequence Embroidery Job Work</div>
-          <div class="address">${firmAddress}</div>
-        </div>
-      </div>
-
-      <!-- Party & Challan Meta Grid -->
-      <div class="party-meta-grid">
-        <div class="party-section">
-          <div class="party-line">
-            <span style="color: #c62828; font-weight: 800; width: 34px; white-space: nowrap; font-size: 12px;">M/s.</span>
-            <span style="font-weight: 800; font-size: 12.5px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantName || ''}</span>
-          </div>
-          <div class="party-line">
-            <span style="font-size: 11px; font-weight: 600; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantAddress || ''}</span>
-          </div>
-          <div class="party-line" style="border-bottom: none; margin-bottom: 0;">
-            <span style="flex: 1;"></span>
-            <span style="color: #c62828; font-weight: 800; margin-right: 4px; white-space: nowrap; font-size: 11.5px;">City:</span>
-            <span style="font-weight: 800; font-size: 11.5px; color: #111; white-space: nowrap;">${challan.merchantCity || 'Surat'}</span>
-          </div>
-        </div>
-
-        <div class="meta-section">
-          <div class="meta-line">
-            <span style="color: #c62828; font-weight: 800; font-size: 11.5px;">Ch.No. :</span>
-            <span style="font-size: 15px; font-weight: 900; color: #c62828; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;">${challan.challanNo || ''}</span>
-          </div>
-          <div class="meta-line">
-            <span style="color: #c62828; font-weight: 800; font-size: 11.5px;">Date :</span>
-            <span style="font-weight: 800; font-size: 11.5px; color: #111;">${formattedDate}</span>
-          </div>
-          <div class="meta-line">
-            <span style="color: #c62828; font-weight: 800; font-size: 11.5px;">P.Ch.No. :</span>
-            <span style="font-weight: 700; font-size: 11.5px; color: #111;">${challan.pChallanNo || '-'}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Items Table -->
-      <table class="table-container">
-        <thead>
-          <tr class="table-header">
-            <th style="width: 36px; text-align: center;">No.</th>
-            <th style="text-align: left; padding-left: 8px;">Particulars</th>
-            <th style="width: 74px; text-align: center;">Qty/Pcs.</th>
-            <th style="width: 66px; text-align: right; padding-right: 8px;">Rate</th>
-            <th style="width: 86px; text-align: right; padding-right: 8px;">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-          <!-- Summary Row -->
-          <tr style="height: 25px; border-top: 2px solid #c62828; border-bottom: 2px solid #c62828;">
-            <td style="border-right: 1.5px solid #c62828; background: #fff;"></td>
-            <td class="summary-box" style="border-right: 1.5px solid #fff;">Total</td>
-            <td style="border-right: 1.5px solid #c62828; text-align: center; font-size: 12.5px; font-weight: 900; color: #111; background: #fff; white-space: nowrap; padding: 2px;">
-              ${challan.totalQty || 0}
-            </td>
-            <td class="summary-box" style="border-right: 1.5px solid #fff;">Net. Amo.</td>
-            <td style="text-align: right; padding-right: 8px; font-size: 13px; font-weight: 900; color: #111; background: #fff; white-space: nowrap;">
-              ₹ ${formatCurrency(challan.netAmount || 0)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <div class="a4-sheet">
+    <!-- TOP HALF: FIRST COPY -->
+    <div style="display: flex; flex-direction: column;">
+      ${renderSingleSlip('First Copy', 'Original')}
     </div>
 
-    <!-- Footer -->
-    <div>
-      <div class="footer-meta">
-        <div>PAN NO.: <span style="color: #111; font-weight: 800; letter-spacing: 0.5px;">${firmPan}</span></div>
-        <div style="font-size: 11.5px; font-weight: 800;">For, ${firmTitle}</div>
+    <!-- MIDDLE: CUT HERE DIVIDER -->
+    <div class="cut-divider">
+      <div class="cut-line"></div>
+      <div class="cut-badge">
+        <span>✂</span>
+        <span>CUT HERE (અહીંથી કાપો)</span>
+        <span>✂</span>
       </div>
+      <div class="cut-line"></div>
+    </div>
 
-      <div class="footer-signs">
-        <div style="color: #333; font-weight: 700;">Receiver Sign...........................</div>
-        <div style="font-weight: 800; color: #c62828;">Propriter/Authority</div>
-      </div>
+    <!-- BOTTOM HALF: SECOND COPY -->
+    <div style="display: flex; flex-direction: column;">
+      ${renderSingleSlip('Second Copy', 'Duplicate')}
     </div>
   </div>
 </body>
