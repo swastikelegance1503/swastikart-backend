@@ -1,7 +1,12 @@
 import DeliveryChallan from '../models/DeliveryChallan.js';
 import Merchant from '../models/Merchant.js';
 import { generateDeliveryChallanPrintHtml } from '../utils/deliveryChallanTemplate.js';
-import { getDriveConfig } from '../utils/googleDriveSync.js';
+import {
+  getDriveConfig,
+  updateDriveConfig,
+  syncDeliveryChallanToGoogleDrive,
+  deleteDeliveryChallanFromGoogleDrive
+} from '../utils/googleDriveSync.js';
 
 /**
  * મેળવો તમામ ડિલિવરી ચલાણ (Get All Delivery Challans with Filters)
@@ -201,8 +206,8 @@ export async function createDeliveryChallan(req, res) {
 
     await deliveryChallan.save();
 
-    // Background Webhook sync (optional)
-    syncDeliveryChallanToDrive(deliveryChallan).catch((err) =>
+    // Background Google Drive & Google Sheet Auto-Sync (Separate Challans Sheet)
+    syncDeliveryChallanToGoogleDrive(deliveryChallan).catch((err) =>
       console.warn('Delivery challan drive sync warning:', err.message)
     );
 
@@ -277,8 +282,8 @@ export async function updateDeliveryChallan(req, res) {
 
     await existing.save();
 
-    // Background Drive sync
-    syncDeliveryChallanToDrive(existing).catch((err) =>
+    // Background Drive sync (Separate Challans Sheet)
+    syncDeliveryChallanToGoogleDrive(existing).catch((err) =>
       console.warn('Delivery challan drive sync warning:', err.message)
     );
 
@@ -302,8 +307,8 @@ export async function deleteDeliveryChallan(req, res) {
       return res.status(404).json({ success: false, message: 'ચલાણ મળ્યું નથી (Delivery Challan not found)' });
     }
 
-    // Google Drive / Sheet delete sync
-    deleteDeliveryChallanFromDrive(challan).catch((err) =>
+    // Google Drive / Sheet delete sync (Separate Challans Sheet)
+    deleteDeliveryChallanFromGoogleDrive(challan).catch((err) =>
       console.warn('Delivery challan drive delete warning:', err.message)
     );
 
@@ -333,83 +338,54 @@ export async function printDeliveryChallan(req, res) {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Google Drive / Sheet Background Sync Helpers
-// -----------------------------------------------------------------------------
-async function syncDeliveryChallanToDrive(challan) {
+/**
+ * એક જ ડિલિવરી ચલાણ Google Drive & Sheet માં સિંક કરો (Manual Sync)
+ */
+export async function syncSingleDeliveryChallanToDriveHandler(req, res) {
   try {
-    const config = await getDriveConfig();
-    if (!config?.webhookUrl || !config.webhookUrl.trim().startsWith('http')) return;
-
-    const printHtml = generateDeliveryChallanPrintHtml(challan);
-    const cleanFirm = (challan.firmName || 'Firm').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const cleanMerch = (challan.merchantName || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `Challan_${challan.challanNo || '0'}_${cleanFirm}_${cleanMerch}.html`;
-
-    const itemsSummary = (challan.items || [])
-      .map((it, idx) => `${idx + 1}. ${it.particulars} (Qty: ${it.qty}, Rate: ${it.rate}, Amt: ${it.amount})`)
-      .join('; ');
-
-    const payload = {
-      action: 'SAVE_CHALLAN',
-      driveEmail: config.email || 'swastikelegance065@gmail.com',
-      billNo: `CH-${challan.challanNo}`,
-      challanNo: challan.challanNo,
-      firmName: challan.firmName,
-      date: challan.date,
-      merchantName: challan.merchantName,
-      merchantAddress: challan.merchantAddress,
-      merchantMobile: challan.merchantMobile,
-      totalQty: challan.totalQty,
-      taxableAmount: challan.netAmount,
-      totalGst: 0,
-      grandTotal: challan.netAmount,
-      status: challan.status,
-      itemsSummary,
-      htmlContent: printHtml,
-      fileName
-    };
-
-    const response = await fetch(config.webhookUrl.trim(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
-    });
-
-    const data = await response.json();
-    if (data?.fileUrl) {
-      await DeliveryChallan.findByIdAndUpdate(challan._id, {
-        googleDriveSynced: true,
-        googleDriveFileUrl: data.fileUrl || '',
-        googleDriveSheetUrl: data.sheetUrl || '',
-        googleDriveSyncedAt: new Date()
-      });
+    const challan = await DeliveryChallan.findById(req.params.id);
+    if (!challan) {
+      return res.status(404).json({ success: false, message: 'ચલાણ મળ્યું નથી' });
     }
-  } catch (err) {
-    console.warn('Delivery challan drive sync helper error:', err.message);
+
+    const result = await syncDeliveryChallanToGoogleDrive(challan);
+    const updated = await DeliveryChallan.findById(req.params.id);
+
+    return res.json({
+      success: result.success,
+      message: result.message || (result.success ? 'Google Drive અને અલગ ચલાણ શીટમાં સેવ થઈ ગયું!' : result.error),
+      error: result.error,
+      data: updated
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 }
 
-async function deleteDeliveryChallanFromDrive(challan) {
+/**
+ * બધા ડિલિવરી ચલાણ Google Drive & Sheet માં એક સાથે સિંક કરો (Batch Sync)
+ */
+export async function syncAllDeliveryChallansToDriveHandler(req, res) {
   try {
-    const config = await getDriveConfig();
-    if (!config?.webhookUrl || !config.webhookUrl.trim().startsWith('http')) return;
+    const challans = await DeliveryChallan.find().sort({ createdAt: 1 });
+    let syncedCount = 0;
+    let failedCount = 0;
 
-    const payload = {
-      action: 'DELETE_CHALLAN',
-      billNo: `CH-${challan.challanNo}`,
-      firmName: challan.firmName
-    };
+    for (const c of challans) {
+      const result = await syncDeliveryChallanToGoogleDrive(c);
+      if (result.success) syncedCount++;
+      else failedCount++;
+    }
 
-    await fetch(config.webhookUrl.trim(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
+    return res.json({
+      success: true,
+      message: `કુલ ${syncedCount} ચલાણ Google Drive & અલગ ચલાણ શીટમાં સિંક થયા.${failedCount > 0 ? ` (${failedCount} નિષ્ફળ)` : ''}`,
+      total: challans.length,
+      synced: syncedCount,
+      failed: failedCount
     });
-  } catch (err) {
-    console.warn('Delivery challan drive delete helper error:', err.message);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 }
 

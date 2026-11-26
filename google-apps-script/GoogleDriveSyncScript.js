@@ -4,6 +4,15 @@
  * Target Account: swastikelegance065@gmail.com
  * ============================================================================
  * 
+ * ફીચર્સ:
+ * ૧. Bills (GST/ઇન્વોઇસ બિલ) અને Delivery Challans (ચલાણ) બંને આપમેળે
+ *    અલગ અલગ Google Sheet (અથવા અલગ અલગ Tabs) માં સેવ થશે.
+ *    - Bills Sheet: "Swastik Art - Bills Record" (Tab: "Bills")
+ *    - Challans Sheet: "Swastik Art - Delivery Challans Record" (Tab: "Delivery Challans")
+ * ૨. Google Drive ફોલ્ડર: "Swastik Art - Challans & Bills"
+ * ૩. ડુપ્લિકેટ નહીં થાય - એક જ નંબર અને પેઢી હોય તો તે રો અપડેટ થશે.
+ * ૪. ડિલીટ કરતી વખતે શીટ અને ડ્રાઇવમાંથી ફાઇલ આપમેળે હટી જશે.
+ * 
  * મહત્વપૂર્ણ પગલાં (Authorization & Deployment Guide):
  * 1. કોડ પેસ્ટ કર્યા પછી ઉપર ડ્રોપડાઉનમાંથી "testAuth" પસંદ કરો અને "Run" (▶️) દબાવો.
  * 2. "Authorization required" પૂછશે -> "Review permissions" -> swastikelegance065@gmail.com પસંદ કરો.
@@ -15,7 +24,6 @@
  * 8. Deploy દબાવો!
  */
 
-// ૧. પરમિશન મંજૂર કરવા માટે આ ફંક્શન રન (Run ▶️) કરો
 function testAuth() {
   Logger.log("Google Drive પરમિશન ચેક થઈ રહી છે...");
   const root = DriveApp.getRootFolder();
@@ -29,10 +37,8 @@ function doPost(e) {
     const rawData = e.postData.contents;
     const data = JSON.parse(rawData);
 
-    // 1. Google Drive ફોલ્ડર (જો ન હોય તો આપમેળે બનાવી દેશે)
-    const folderName = "Swastik Art - Challans & Bills";
-    const sheetName = "Challans & Bills Master Record";
-
+    // ૧. Google Drive મુખ્ય ફોલ્ડર મેળવો અથવા બનાવો
+    const folderName = data.folderName || "Swastik Art - Challans & Bills";
     let folder;
     const folderIter = DriveApp.getFoldersByName(folderName);
     if (folderIter.hasNext()) {
@@ -42,36 +48,57 @@ function doPost(e) {
       folder.setDescription("Swastik Art and Astha Fashion Automated Challans & Bills Backup");
     }
 
+    // પ્રકાર નક્કી કરો: ડિલિવરી ચલાણ (CHALLAN) કે જીએસટી બિલ (BILL)
+    const isDeliveryChallan = Boolean(
+      data.recordType === "DELIVERY_CHALLAN" ||
+      data.action === "SAVE_DELIVERY_CHALLAN" ||
+      data.action === "DELETE_DELIVERY_CHALLAN" ||
+      (data.challanNo && !data.billNo)
+    );
+
+    // બંને માટે અલગ અલગ શીટ ફાઈલ અને ટેબ નામ
+    const targetSheetFileName = data.targetSheetName || (
+      isDeliveryChallan ? "Swastik Art - Delivery Challans Record" : "Swastik Art - Bills Record"
+    );
+    const targetTabName = data.targetTabName || (
+      isDeliveryChallan ? "Delivery Challans" : "Bills"
+    );
+
     // ------------------------------------------------------------------------
-    // એક્શન ૧: બિલ ડિલીટ કરવું (DELETE_CHALLAN)
+    // એક્શન ૧: ડિલીટ કરવું (DELETE_CHALLAN / DELETE_DELIVERY_CHALLAN)
     // ------------------------------------------------------------------------
-    if (data.action === "DELETE_CHALLAN") {
+    if (data.action === "DELETE_CHALLAN" || data.action === "DELETE_DELIVERY_CHALLAN") {
       let rowDeleted = false;
       let fileDeleted = false;
 
-      // ૧. સ્પ્રેડશીટમાંથી તે બિલની રો ડિલીટ કરવી
-      const sheetFileIter = folder.getFilesByName(sheetName);
-      if (sheetFileIter.hasNext()) {
-        const spreadsheet = SpreadsheetApp.open(sheetFileIter.next());
-        const sheet = spreadsheet.getActiveSheet();
-        const values = sheet.getDataRange().getValues();
+      // સ્પ્રેડશીટ શોધો
+      const sheetFilesToSearch = [targetSheetFileName, "Challans & Bills Master Record"];
+      sheetFilesToSearch.forEach(function(fileName) {
+        const sheetFileIter = folder.getFilesByName(fileName);
+        while (sheetFileIter.hasNext()) {
+          try {
+            const spreadsheet = SpreadsheetApp.open(sheetFileIter.next());
+            const targetSheet = spreadsheet.getSheetByName(targetTabName) || spreadsheet.getActiveSheet();
+            const values = targetSheet.getDataRange().getValues();
 
-        // છેલ્લેથી શરૂ કરીને ઉપર તરફ લૂપ (જેથી રો ઇન્ડેક્સ ખોટો ન થાય)
-        for (let i = values.length - 1; i >= 1; i--) {
-          const rowBillNo = String(values[i][1]).trim();
-          const rowFirmName = String(values[i][3]).trim().toLowerCase();
-          const targetBillNo = String(data.billNo).trim();
-          const targetFirmName = String(data.firmName || "").trim().toLowerCase();
+            for (let i = values.length - 1; i >= 1; i--) {
+              const rowId = String(values[i][1]).trim();
+              const rowFirm = String(values[i][3]).trim().toLowerCase();
+              const targetId = String(isDeliveryChallan ? (data.challanNo || data.billNo) : data.billNo).trim();
+              const targetFirm = String(data.firmName || "").trim().toLowerCase();
 
-          // બિલ નંબર અને પેઢી બંને મેચ થાય ત્યારે જ ડિલીટ કરવું
-          if (rowBillNo === targetBillNo && (!targetFirmName || rowFirmName === targetFirmName)) {
-            sheet.deleteRow(i + 1);
-            rowDeleted = true;
+              if (rowId === targetId && (!targetFirm || rowFirm === targetFirm)) {
+                targetSheet.deleteRow(i + 1);
+                rowDeleted = true;
+              }
+            }
+          } catch (e) {
+            Logger.log("Delete search error in " + fileName + ": " + e);
           }
         }
-      }
+      });
 
-      // ૨. Google Drive માંથી બિલની ફાઈલ Trash માં નાખવી
+      // ફાઈલ ડિલીટ (Trash)
       if (data.fileName) {
         const fileIter = folder.getFilesByName(data.fileName);
         while (fileIter.hasNext()) {
@@ -82,20 +109,21 @@ function doPost(e) {
 
       return ContentService.createTextOutput(JSON.stringify({
         success: true,
-        action: "DELETE_CHALLAN",
-        billNo: data.billNo,
-        firmName: data.firmName,
+        action: data.action,
+        recordType: isDeliveryChallan ? "DELIVERY_CHALLAN" : "BILL",
         rowDeleted: rowDeleted,
         fileDeleted: fileDeleted,
-        message: rowDeleted ? "બિલ સફળતાપૂર્વક Google Sheet માંથી ડિલીટ થઈ ગયું!" : "બિલ Google Sheet માં મળ્યું નથી"
+        message: rowDeleted ? "રેકોર્ડ Google Sheet માંથી સફળતાપૂર્વક ડિલીટ થઈ ગયો!" : "રેકોર્ડ Google Sheet માં મળ્યો નથી"
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // ------------------------------------------------------------------------
-    // એક્શન ૨: બિલ સેવ / અપડેટ કરવું (SAVE_CHALLAN)
+    // એક્શન ૨: ફાઈલ સેવ કરવી (HTML / PDF Preview Backup)
     // ------------------------------------------------------------------------
-    // 2. બિલ HTML / PDF ફાઈલ Drive ફોલ્ડરમાં સેવ કરવી
-    const fileName = data.fileName || ("Bill_" + (data.billNo || "0") + "_" + (data.firmName || "Firm") + ".html");
+    const defaultFileName = isDeliveryChallan
+      ? ("Challan_" + (data.challanNo || "0") + "_" + (data.firmName || "Firm") + ".html")
+      : ("Bill_" + (data.billNo || "0") + "_" + (data.firmName || "Firm") + ".html");
+    const fileName = data.fileName || defaultFileName;
     const blob = Utilities.newBlob(data.htmlContent || "", "text/html", fileName);
 
     let file;
@@ -106,71 +134,36 @@ function doPost(e) {
     } else {
       file = folder.createFile(blob);
     }
-
-    // ફાઈલ લિંકથી કોઈ પણ જોઈ શકે તેવું એક્સેસ
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     const fileUrl = file.getUrl();
 
-    // 3. Google Sheet માં એન્ટ્રી કરવી (માસ્ટર રેકોર્ડ સ્પ્રેડશીટ)
+    // ------------------------------------------------------------------------
+    // એક્શન ૩: સ્પ્રેડશીટ મેળવવી અથવા અલગ શીટ ફાઈલ બનાવવી
+    // ------------------------------------------------------------------------
     let spreadsheet;
-    const sheetFileIter = folder.getFilesByName(sheetName);
+    const sheetFileIter = folder.getFilesByName(targetSheetFileName);
     if (sheetFileIter.hasNext()) {
-      const sFile = sheetFileIter.next();
-      spreadsheet = SpreadsheetApp.open(sFile);
+      spreadsheet = SpreadsheetApp.open(sheetFileIter.next());
     } else {
-      spreadsheet = SpreadsheetApp.create(sheetName);
+      spreadsheet = SpreadsheetApp.create(targetSheetFileName);
       const sFile = DriveApp.getFileById(spreadsheet.getId());
       folder.addFile(sFile);
       DriveApp.getRootFolder().removeFile(sFile);
     }
 
-    const sheet = spreadsheet.getActiveSheet();
-
-    // જો નવી શીટ હોય તો પ્રીમિયમ હેડર સેટ કરો
-    if (sheet.getLastRow() === 0) {
-      const headers = [
-        "Date (તારીખ)",
-        "Bill No",
-        "Challan No",
-        "Firm Name (પેઢી)",
-        "Merchant / Customer (વેપારી)",
-        "Address",
-        "Mobile",
-        "Items Summary (આઇટમ્સ)",
-        "Total Qty",
-        "Taxable Amount (Rs)",
-        "GST Amount (Rs)",
-        "Grand Total (Rs)",
-        "Payment Status",
-        "Drive Bill File Link (બિલ જુઓ)",
-        "Synced At (સિંક સમય)"
-      ];
-      sheet.appendRow(headers);
-
-      // હેડર સ્ટાઇલ (Swastik Art Red Theme)
-      const headerRange = sheet.getRange(1, 1, 1, headers.length);
-      headerRange.setBackground("#b71c1c");
-      headerRange.setFontColor("#ffffff");
-      headerRange.setFontWeight("bold");
-      headerRange.setFontSize(11);
-      headerRange.setHorizontalAlignment("center");
-      sheet.setFrozenRows(1);
-    }
-
-    // ડુપ્લિકેટ અટકાવવા માટે: જો આ બિલ નંબર અને ફર્મ પહેલેથી હોય તો તે રો અપડેટ થશે
-    const values = sheet.getDataRange().getValues();
-    let rowIndex = -1;
-    for (let i = 1; i < values.length; i++) {
-      if (
-        String(values[i][1]).trim() === String(data.billNo).trim() &&
-        String(values[i][3]).trim().toLowerCase() === String(data.firmName).trim().toLowerCase()
-      ) {
-        rowIndex = i + 1; // 1-based row index
-        break;
+    // નિર્ધારિત Tab (Sheet) મેળવો અથવા બનાવો
+    let sheet = spreadsheet.getSheetByName(targetTabName);
+    if (!sheet) {
+      const allSheets = spreadsheet.getSheets();
+      if (allSheets.length === 1 && allSheets[0].getLastRow() === 0) {
+        sheet = allSheets[0];
+        sheet.setName(targetTabName);
+      } else {
+        sheet = spreadsheet.insertSheet(targetTabName);
       }
     }
 
-    // તારીખ ફોર્મેટિંગ
+    // તારીખ ફોર્મેટ
     let formattedDate = "";
     if (data.date) {
       try {
@@ -179,41 +172,163 @@ function doPost(e) {
         formattedDate = String(data.date);
       }
     }
-
     const nowFormatted = Utilities.formatDate(new Date(), "Asia/Kolkata", "dd/MM/yyyy HH:mm:ss");
 
-    const rowData = [
-      formattedDate,
-      String(data.billNo || ""),
-      String(data.challanNo || ""),
-      String(data.firmName || ""),
-      String(data.merchantName || ""),
-      String(data.merchantAddress || ""),
-      String(data.merchantMobile || ""),
-      String(data.itemsSummary || ""),
-      Number(data.totalQty) || 0,
-      Number(data.taxableAmount) || 0,
-      Number(data.totalGst) || 0,
-      Number(data.grandTotal) || 0,
-      String(data.status || "Pending"),
-      fileUrl,
-      nowFormatted
-    ];
+    // ------------------------------------------------------------------------
+    // A. ડિલિવરી ચલાણ હેડર અને રો ડેટા (Delivery Challan Row Data)
+    // ------------------------------------------------------------------------
+    if (isDeliveryChallan) {
+      if (sheet.getLastRow() === 0) {
+        const challanHeaders = [
+          "Date (તારીખ)",
+          "Challan No (ચલાણ નં)",
+          "P.Challan No (પાર્ટી ચલાણ નં)",
+          "Firm Name (પેઢી)",
+          "Merchant / Party (વેપારી)",
+          "City (શહેર)",
+          "Address (સરનામું)",
+          "Mobile (મોબાઇલ નં)",
+          "Particulars / Work (કામની વિગત)",
+          "Total Qty / Pcs (કુલ જથ્થો / નંગ)",
+          "Rate (ભાવ ₹)",
+          "Net Amount (કુલ નેટ રકમ ₹)",
+          "Status (સ્ટેટસ)",
+          "Challan File Link (ચલાણ જુઓ)",
+          "Synced At (સિંક સમય)"
+        ];
+        sheet.appendRow(challanHeaders);
 
-    if (rowIndex > 0) {
-      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
+        const hRange = sheet.getRange(1, 1, 1, challanHeaders.length);
+        hRange.setBackground("#991b1b");
+        hRange.setFontColor("#ffffff");
+        hRange.setFontWeight("bold");
+        hRange.setFontSize(11);
+        hRange.setHorizontalAlignment("center");
+        sheet.setFrozenRows(1);
+      }
+
+      // ડુપ્લિકેટ ચેક અને અપડેટ
+      const values = sheet.getDataRange().getValues();
+      let rowIndex = -1;
+      for (let i = 1; i < values.length; i++) {
+        if (
+          String(values[i][1]).trim() === String(data.challanNo).trim() &&
+          String(values[i][3]).trim().toLowerCase() === String(data.firmName).trim().toLowerCase()
+        ) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+
+      const rowData = [
+        formattedDate,
+        String(data.challanNo || ""),
+        String(data.pChallanNo || "-"),
+        String(data.firmName || ""),
+        String(data.merchantName || ""),
+        String(data.merchantCity || "Surat"),
+        String(data.merchantAddress || ""),
+        String(data.merchantMobile || ""),
+        String(data.itemsSummary || ""),
+        Number(data.totalQty) || 0,
+        Number(data.rate) || 0,
+        Number(data.netAmount || data.grandTotal) || 0,
+        String(data.status || "Delivered"),
+        fileUrl,
+        nowFormatted
+      ];
+
+      if (rowIndex > 0) {
+        sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+      } else {
+        sheet.appendRow(rowData);
+      }
+
+      const targetRow = rowIndex > 0 ? rowIndex : sheet.getLastRow();
+      sheet.getRange(targetRow, 10).setNumberFormat("#,##0");
+      sheet.getRange(targetRow, 11).setNumberFormat("₹#,##0.00");
+      sheet.getRange(targetRow, 12).setNumberFormat("₹#,##0.00");
     }
+    // ------------------------------------------------------------------------
+    // B. જીએસટી / બિલ હેડર અને રો ડેટા (Bill Row Data)
+    // ------------------------------------------------------------------------
+    else {
+      if (sheet.getLastRow() === 0) {
+        const billHeaders = [
+          "Date (તારીખ)",
+          "Bill No (બિલ નં)",
+          "Challan / Ref No (ચલાણ / રેફ. નં)",
+          "Firm Name (પેઢી)",
+          "Merchant / Customer (વેપારી)",
+          "Address (સરનામું)",
+          "Mobile (મોબાઇલ નં)",
+          "Items Summary (આઇટમ્સ વિગત)",
+          "Total Qty (કુલ જથ્થો)",
+          "Taxable Amount (કરપાત્ર રકમ ₹)",
+          "GST Amount (કુલ GST ₹)",
+          "Grand Total (કુલ રકમ ₹)",
+          "Payment Status (પેમેન્ટ સ્ટેટસ)",
+          "Drive Bill File Link (બિલ જુઓ)",
+          "Synced At (સિંક સમય)"
+        ];
+        sheet.appendRow(billHeaders);
 
-    // ફોર્મેટિંગ નંબર્સ
-    const lastRow = rowIndex > 0 ? rowIndex : sheet.getLastRow();
-    sheet.getRange(lastRow, 9).setNumberFormat("#,##0");
-    sheet.getRange(lastRow, 10, 1, 3).setNumberFormat("₹#,##0.00");
+        const hRange = sheet.getRange(1, 1, 1, billHeaders.length);
+        hRange.setBackground("#b71c1c");
+        hRange.setFontColor("#ffffff");
+        hRange.setFontWeight("bold");
+        hRange.setFontSize(11);
+        hRange.setHorizontalAlignment("center");
+        sheet.setFrozenRows(1);
+      }
+
+      const values = sheet.getDataRange().getValues();
+      let rowIndex = -1;
+      for (let i = 1; i < values.length; i++) {
+        if (
+          String(values[i][1]).trim() === String(data.billNo).trim() &&
+          String(values[i][3]).trim().toLowerCase() === String(data.firmName).trim().toLowerCase()
+        ) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+
+      const rowData = [
+        formattedDate,
+        String(data.billNo || ""),
+        String(data.challanNo || ""),
+        String(data.firmName || ""),
+        String(data.merchantName || ""),
+        String(data.merchantAddress || ""),
+        String(data.merchantMobile || ""),
+        String(data.itemsSummary || ""),
+        Number(data.totalQty) || 0,
+        Number(data.taxableAmount) || 0,
+        Number(data.totalGst) || 0,
+        Number(data.grandTotal) || 0,
+        String(data.status || "Pending"),
+        fileUrl,
+        nowFormatted
+      ];
+
+      if (rowIndex > 0) {
+        sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+      } else {
+        sheet.appendRow(rowData);
+      }
+
+      const targetRow = rowIndex > 0 ? rowIndex : sheet.getLastRow();
+      sheet.getRange(targetRow, 9).setNumberFormat("#,##0");
+      sheet.getRange(targetRow, 10, 1, 3).setNumberFormat("₹#,##0.00");
+    }
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
-      message: "Bill successfully saved to Google Drive & Google Sheet!",
+      recordType: isDeliveryChallan ? "DELIVERY_CHALLAN" : "BILL",
+      targetSheetName: targetSheetFileName,
+      targetTabName: targetTabName,
+      message: (isDeliveryChallan ? "ચલાણ" : "બિલ") + " સફળતાપૂર્વક Google Drive અને તેની અલગ Google Sheet માં સેવ થઈ ગયું!",
       fileUrl: fileUrl,
       sheetUrl: spreadsheet.getUrl(),
       folderUrl: folder.getUrl()
@@ -230,7 +345,11 @@ function doPost(e) {
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
-    message: "Swastik Art Google Drive Webhook is ACTIVE for swastikelegance065@gmail.com",
+    message: "Swastik Art Multi-Sheet Sync Webhook is ACTIVE for swastikelegance065@gmail.com",
+    features: [
+      "Bills Sheet: Swastik Art - Bills Record",
+      "Challans Sheet: Swastik Art - Delivery Challans Record"
+    ],
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
 }
