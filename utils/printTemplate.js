@@ -18,6 +18,9 @@ function formatDate(d) {
   return `${day}/${month}/${year}`;
 }
 
+/**
+ * Generates Full A4 Page Tax Invoice / Bill Print HTML (Backend)
+ */
 export function generateChallanPrintHtml(challan) {
   const firm = (challan.firmSnapshot && typeof challan.firmSnapshot.toObject === 'function')
     ? challan.firmSnapshot.toObject()
@@ -51,7 +54,7 @@ export function generateChallanPrintHtml(challan) {
     : (firm.address || '66,67, 3rd Floor, R.K. Industries, Kapodra, Varachha Road, Surat');
 
   const gstin = firm.gstin || (isAstha ? '' : '24BKJPS1499H1ZP');
-  const panNo = firm.panNo || (isAstha ? 'DFQPS3042G' : '');
+  const panNo = firm.panNo || (isAstha ? 'DFQPS3042G' : 'BKJPS1499H');
 
   // Bank details
   const bank = firm.bankDetails || {};
@@ -71,16 +74,17 @@ export function generateChallanPrintHtml(challan) {
     ? (bank.branch || 'Varachha Road, Surat')
     : (bank.branch || 'Ring Road, Surat');
 
-  const rowsCount = Math.max(10, (challan.items || []).length);
+  // 13 rows ensures proportional fit on Full A4 Page
+  const rowsCount = Math.max(13, (challan.items || []).length);
   const rowsHtml = [];
 
   for (let i = 0; i < rowsCount; i++) {
     const item = challan.items && challan.items[i];
     if (item) {
       rowsHtml.push(`
-        <tr>
+        <tr class="item-row">
           <td class="text-center font-bold">${i + 1}</td>
-          <td>${item.description || item.particulars || ''}</td>
+          <td class="item-particulars">${item.description || item.particulars || ''}</td>
           <td class="text-center font-bold">${item.qty}</td>
           <td class="text-right">${formatCurrency(item.rate)}</td>
           <td class="text-right font-bold">${formatCurrency(item.amount)}</td>
@@ -112,31 +116,34 @@ export function generateChallanPrintHtml(challan) {
 <html lang="gu">
 <head>
   <meta charset="UTF-8">
-  <title>Bill / Challan - ${firmName} - ${challan.billNo}</title>
+  <title>Tax Invoice / Bill - ${firmName} - #${challan.billNo || '1'}</title>
   <style>
     @page {
       size: A4 portrait;
-      margin: 10mm;
+      margin: 8mm 10mm;
     }
     * {
       box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
-    body {
-      background: #eef2f5;
+    html, body {
       margin: 0;
-      padding: 16px;
+      padding: 0;
+      background: #f1f5f9;
       color: #111;
+      -webkit-font-smoothing: antialiased;
     }
     .no-print-toolbar {
-      max-width: 800px;
-      margin: 0 auto 15px auto;
+      max-width: 760px;
+      margin: 0 auto 12px auto;
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: #1e293b;
       color: #fff;
-      padding: 12px 20px;
+      padding: 10px 18px;
       border-radius: 8px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
@@ -144,8 +151,8 @@ export function generateChallanPrintHtml(challan) {
       background: #dc2626;
       color: #fff;
       border: none;
-      padding: 9px 20px;
-      font-size: 14px;
+      padding: 8px 18px;
+      font-size: 13px;
       font-weight: 600;
       border-radius: 6px;
       cursor: pointer;
@@ -154,13 +161,15 @@ export function generateChallanPrintHtml(challan) {
       background: #b91c1c;
     }
     .bill-container {
-      max-width: 800px;
+      width: 100%;
+      max-width: 760px;
       margin: 0 auto;
       background: #ffffff;
       border: 2px solid #b71c1c;
-      padding: 18px 22px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      padding: 16px 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
       position: relative;
+      box-sizing: border-box;
     }
     .bill-container::before {
       content: "";
@@ -168,13 +177,13 @@ export function generateChallanPrintHtml(challan) {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 360px;
-      height: 360px;
+      width: 380px;
+      height: 380px;
       background-image: url('${logoBase64}');
       background-repeat: no-repeat;
       background-position: center;
       background-size: contain;
-      opacity: 0.08;
+      opacity: 0.07;
       pointer-events: none;
       z-index: 0;
     }
@@ -194,7 +203,8 @@ export function generateChallanPrintHtml(challan) {
       font-weight: 700;
       color: #b71c1c;
       font-style: italic;
-      margin-top: 2px;
+      margin-top: 3px;
+      white-space: nowrap;
     }
     .gstin-pill {
       display: inline-block;
@@ -202,21 +212,23 @@ export function generateChallanPrintHtml(challan) {
       color: #ffffff;
       padding: 4px 12px;
       border-radius: 4px;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: bold;
       margin-top: 6px;
       letter-spacing: 0.5px;
+      white-space: nowrap;
     }
     .header-contact {
       text-align: right;
       font-size: 11.5px;
       line-height: 1.4;
       vertical-align: top;
+      white-space: nowrap;
     }
     .contact-phone {
       font-weight: bold;
       color: #0f172a;
-      font-size: 13px;
+      font-size: 12.5px;
     }
     .details-box {
       border: 1px solid #b71c1c;
@@ -232,72 +244,91 @@ export function generateChallanPrintHtml(challan) {
     }
     .details-left {
       width: 65%;
-      line-height: 1.6;
+      line-height: 1.55;
     }
     .details-right {
       width: 35%;
-      line-height: 1.6;
+      line-height: 1.55;
       text-align: right;
     }
     .detail-row {
       display: flex;
       margin-bottom: 2px;
+      white-space: nowrap;
     }
     .detail-label {
       font-weight: bold;
-      color: #334155;
-      min-width: 65px;
+      color: #b71c1c;
+      min-width: 60px;
+      white-space: nowrap;
     }
     .detail-val {
       font-weight: 600;
       color: #0f172a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .items-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 4px;
-      border: 1px solid #b71c1c;
+      border: 1.5px solid #b71c1c;
       position: relative;
       z-index: 1;
     }
     .items-table th {
-      background: #b71c1c;
-      color: #ffffff;
+      background: #b71c1c !important;
+      color: #ffffff !important;
       padding: 7px 6px;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       border: 1px solid #b71c1c;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .items-table td {
-      border: 1px solid #f0a3a3;
+      border: 1px solid #fca5a5;
       padding: 5px 8px;
-      font-size: 12.5px;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+    .item-row td {
+      height: 25px;
     }
     .empty-row td {
-      height: 22px;
+      height: 25px;
+    }
+    .item-particulars {
+      font-weight: 600;
+      color: #111;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 320px;
     }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
     .font-bold { font-weight: bold; }
+
     .summary-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 0px;
-      border: 1px solid #b71c1c;
+      border: 1.5px solid #b71c1c;
       border-top: none;
       position: relative;
       z-index: 1;
     }
     .summary-left {
-      width: 58%;
+      width: 56%;
       vertical-align: top;
       padding: 8px 12px;
-      border-right: 1px solid #b71c1c;
+      border-right: 1.5px solid #b71c1c;
       font-size: 11px;
     }
     .summary-right {
-      width: 42%;
+      width: 44%;
       vertical-align: top;
       padding: 0;
     }
@@ -307,21 +338,29 @@ export function generateChallanPrintHtml(challan) {
       font-size: 11.5px;
       margin-bottom: 3px;
     }
+    .bank-row {
+      line-height: 1.45;
+      white-space: nowrap;
+    }
     .tax-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       padding: 3.5px 10px;
-      font-size: 12px;
+      font-size: 11.5px;
       border-bottom: 1px solid #fecaca;
+      white-space: nowrap;
     }
     .grand-total-row {
       display: flex;
       justify-content: space-between;
-      padding: 6px 10px;
-      font-size: 14.5px;
+      align-items: center;
+      padding: 7px 10px;
+      font-size: 14px;
       font-weight: bold;
-      background: #b71c1c;
-      color: #ffffff;
+      background: #b71c1c !important;
+      color: #ffffff !important;
+      white-space: nowrap;
     }
     .sign-section {
       display: flex;
@@ -331,6 +370,7 @@ export function generateChallanPrintHtml(challan) {
       font-size: 11.5px;
       position: relative;
       z-index: 1;
+      white-space: nowrap;
     }
     .sign-authority {
       text-align: right;
@@ -343,21 +383,29 @@ export function generateChallanPrintHtml(challan) {
       border-top: 1px dashed #f87171;
       padding-top: 4px;
     }
+
     @media print {
-      body {
-        background: #fff;
-        padding: 0;
-      }
       .no-print-toolbar {
         display: none !important;
+      }
+      body {
+        background: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       .bill-container {
         border: 2px solid #b71c1c !important;
         box-shadow: none !important;
         max-width: 100% !important;
-        padding: 10px !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        padding: 6mm 8mm !important;
+      }
+    }
+    @media screen {
+      body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
     }
   </style>
@@ -366,34 +414,32 @@ export function generateChallanPrintHtml(challan) {
 
   <div class="no-print-toolbar">
     <div>
-      <strong>📄 Bill / Challan: ${challan.billNo}</strong> (${firmName})
+      <strong>${firmName}</strong> - Tax Invoice / Bill #${challan.billNo || '1'} (Full A4 Page)
     </div>
-    <div>
-      <button class="print-btn" onclick="window.print()">🖨️ Print Bill / PDF</button>
-    </div>
+    <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
   </div>
 
   <div class="bill-container">
     <table class="header-table">
       <tr>
         <td class="brand-section">
-          <div style="margin-bottom: 3px;">
-            <img src="${logoBase64}" style="max-height: 54px; max-width: 250px; object-fit: contain;" alt="${firmName}" />
+          <div style="margin-bottom: 2px;">
+            <img src="${logoBase64}" style="max-height: 52px; max-width: 250px; object-fit: contain;" alt="${firmName}" />
           </div>
           <div class="brand-tagline">${tagline}</div>
           ${bannerPill}
         </td>
         <td class="header-contact">
-          ${ownerName ? `<div style="font-weight: bold; color: #0f172a; font-size: 13.5px; margin-bottom: 2px;">${ownerName}</div>` : ''}
+          ${ownerName ? `<div style="font-weight: bold; color: #0f172a; font-size: 13px; margin-bottom: 2px;">${ownerName}</div>` : ''}
           <div class="contact-phone">Mo. ${mobile1}</div>
           <div class="contact-phone">Mo. ${mobile2}</div>
-          <div style="margin-top: 3px; color: #334155;">${address}</div>
+          <div style="margin-top: 3px; color: #334155; font-size: 10.5px;">${address}</div>
         </td>
       </tr>
     </table>
 
     <div class="details-box">
-      <!-- Left: Customer Name and Address (GSTIN removed as requested) -->
+      <!-- Left: Customer Name and Address -->
       <div class="details-left">
         <div class="detail-row">
           <span class="detail-label">Name :</span>
@@ -403,13 +449,17 @@ export function generateChallanPrintHtml(challan) {
           <span class="detail-label">Add. :</span>
           <span class="detail-val">${challan.merchantAddress || ''}</span>
         </div>
+        <div class="detail-row">
+          <span class="detail-label">City :</span>
+          <span class="detail-val">${challan.merchantCity || 'Surat'}</span>
+        </div>
       </div>
 
       <!-- Right: Bill No, Ch No, Date -->
       <div class="details-right">
         <div class="detail-row" style="justify-content: flex-end;">
           <span class="detail-label" style="text-align: right; min-width: auto; margin-right: 6px;">Bill No. :-</span>
-          <span class="detail-val" style="color: #b71c1c; font-size: 16px;">${challan.billNo || '1'}</span>
+          <span class="detail-val" style="color: #b71c1c; font-size: 16px; font-weight: bold;">${challan.billNo || '1'}</span>
         </div>
         <div class="detail-row" style="justify-content: flex-end;">
           <span class="detail-label" style="text-align: right; min-width: auto; margin-right: 6px;">Ch. No. :-</span>
@@ -425,11 +475,11 @@ export function generateChallanPrintHtml(challan) {
     <table class="items-table">
       <thead>
         <tr>
-          <th style="width: 7%;">Sr. No.</th>
-          <th style="width: 53%;">Particulars</th>
-          <th style="width: 13%;">Qty.</th>
-          <th style="width: 13%;">Rate</th>
-          <th style="width: 14%;">Amount .</th>
+          <th style="width: 6%;">Sr. No.</th>
+          <th style="width: 52%; text-align: left; padding-left: 8px;">Particulars</th>
+          <th style="width: 12%;">Qty.</th>
+          <th style="width: 14%; text-align: right; padding-right: 8px;">Rate</th>
+          <th style="width: 16%; text-align: right; padding-right: 8px;">Amount</th>
         </tr>
       </thead>
       <tbody>
@@ -441,11 +491,11 @@ export function generateChallanPrintHtml(challan) {
       <tr>
         <td class="summary-left">
           <div class="bank-details-title">Bank Details:</div>
-          <div><strong>Bank Name :</strong> ${bankName}</div>
-          <div><strong>Ac No. :</strong> ${acNo}</div>
-          <div><strong>IFSC Code :</strong> ${ifsc}</div>
-          <div><strong>Branch :</strong> ${branch}</div>
-          ${panNo && isAstha ? `<div><strong>Pan No. :</strong> ${panNo}</div>` : ''}
+          <div class="bank-row"><strong>Bank Name :</strong> ${bankName}</div>
+          <div class="bank-row"><strong>Ac No. :</strong> ${acNo}</div>
+          <div class="bank-row"><strong>IFSC Code :</strong> ${ifsc}</div>
+          <div class="bank-row"><strong>Branch :</strong> ${branch}</div>
+          ${panNo ? `<div class="bank-row"><strong>Pan No. :</strong> ${panNo}</div>` : ''}
 
           <div class="terms-box">
             <strong>TERMS & CONDITIONS</strong><br/>
@@ -485,7 +535,7 @@ export function generateChallanPrintHtml(challan) {
             <span>${formatCurrency(challan.igstAmount)}</span>
           </div>` : ''}
           ` : ''}
-          <!-- Label Changed to Total Amount -->
+          <!-- Grand Total Banner -->
           <div class="grand-total-row">
             <span>Total Amount</span>
             <span>₹ ${formatCurrency(challan.grandTotal)}</span>
@@ -501,7 +551,7 @@ export function generateChallanPrintHtml(challan) {
       </div>
       <div class="sign-authority">
         <div style="font-weight: bold; color: #b71c1c; font-size: 13px;">For, ${firmName}</div>
-        <div style="margin-top: 32px; font-weight: 700; color: #1e293b;">Propriter/Authority</div>
+        <div style="margin-top: 28px; font-weight: 700; color: #1e293b;">Propriter/Authority</div>
       </div>
     </div>
   </div>
