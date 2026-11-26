@@ -39,16 +39,16 @@ export function generateDeliveryChallanPrintHtml(challan) {
     formattedDate = `${day}/${month}/${year}`;
   }
 
-  // Items Table Rows: 9 rows per slip gives an authentic challan pad look and fits 2 copies on a single A4 page
+  // Items Table Rows: 11 rows per slip gives an authentic challan pad look and fills the A4 page evenly
   const items = challan.items || [];
-  const minRows = Math.max(items.length, 9);
+  const minRows = Math.max(items.length, 11);
   let rowsHtml = '';
 
   for (let i = 0; i < minRows; i++) {
     const item = items[i];
     if (item) {
       rowsHtml += `
-        <tr style="height: 22px;">
+        <tr style="height: 24px;">
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 10.5px; font-weight: bold; color: #222; padding: 1px 2px; white-space: nowrap;">${item.srNo || i + 1}</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; padding: 1px 6px; font-size: 11px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;">${item.particulars || ''}</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2; text-align: center; font-size: 11px; font-weight: bold; color: #111; padding: 1px 2px; white-space: nowrap;">${item.qty || ''}</td>
@@ -58,7 +58,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
       `;
     } else {
       rowsHtml += `
-        <tr style="height: 22px;">
+        <tr style="height: 24px;">
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
           <td style="border-right: 1.5px solid #c62828; border-bottom: 1px solid #ffcdd2;">&nbsp;</td>
@@ -156,21 +156,16 @@ export function generateDeliveryChallanPrintHtml(challan) {
       </table>
 
       <!-- Footer -->
-      <div style="margin-top: 4px;">
+      <div style="margin-top: 5px;">
         <div class="footer-meta">
           <div>PAN NO.: <span style="color: #111; font-weight: 800; letter-spacing: 0.5px;">${firmPan}</span></div>
-          <div style="font-size: 10.5px; font-weight: 800;">For, ${firmTitle}</div>
+          <div style="font-size: 11px; font-weight: 800;">For, ${firmTitle}</div>
         </div>
 
         <div class="footer-signs">
           <div style="color: #333; font-weight: 700;">Receiver Sign...........................</div>
           <div style="font-weight: 800; color: #c62828;">Propriter/Authority</div>
         </div>
-      </div>
-
-      <!-- Copy Indicator Bar -->
-      <div class="slip-copy-footer">
-        ${copyLabel}
       </div>
     </div>
   `;
@@ -217,7 +212,7 @@ export function generateDeliveryChallanPrintHtml(challan) {
       width: 100%;
       border: 1.5px solid #c62828;
       border-radius: 2px;
-      padding: 5px 8px 3px 8px;
+      padding: 6px 9px 6px 9px;
       background: #fff;
       position: relative;
       box-sizing: border-box;
@@ -396,24 +391,13 @@ export function generateDeliveryChallanPrintHtml(challan) {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 12px;
-      font-size: 9.5px;
+      margin-top: 38px;
+      font-size: 10px;
       font-weight: 800;
       color: #c62828;
       white-space: nowrap;
       position: relative;
       z-index: 1;
-    }
-    .slip-copy-footer {
-      text-align: center;
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #c62828;
-      margin-top: 3px;
-      padding-top: 2px;
-      border-top: 0.5px dotted #fca5a5;
     }
     .cut-divider {
       display: flex;
