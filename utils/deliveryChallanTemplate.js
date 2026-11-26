@@ -69,20 +69,19 @@ export function generateDeliveryChallanPrintHtml(challan) {
     }
   }
 
-  // Generates markup for a single slip (First Copy or Second Copy)
-  const renderSingleSlip = (copyLabel, copySubtitle) => `
+  // Generates markup for a single slip
+  const renderSingleSlip = () => `
     <div class="challan-slip">
       <!-- Watermark Logo -->
       <div class="watermark-bg"></div>
 
-      <!-- Header: Top Badges + Logo + Contact -->
+      <!-- Header: Logo (Left) + Centered Delivery Challan + Contact (Right) -->
       <div class="header-layout">
         <div class="header-left">
-          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-            <span class="top-badge">Delivery Challan</span>
-            <span class="copy-badge">${copySubtitle}</span>
-          </div>
-          <img src="${logoBase64}" style="max-height: 40px; max-width: 190px; object-fit: contain; display: block;" alt="${firmTitle}" />
+          <img src="${logoBase64}" style="max-height: 44px; max-width: 190px; object-fit: contain; display: block;" alt="${firmTitle}" />
+        </div>
+        <div class="header-center">
+          <span class="challan-title-pill">Delivery Challan</span>
         </div>
         <div class="header-right">
           <div class="mobiles">
@@ -234,29 +233,18 @@ export function generateDeliveryChallanPrintHtml(challan) {
       pointer-events: none;
       z-index: 0;
     }
-    .top-badge {
+    .challan-title-pill {
       display: inline-block;
-      border: 1px solid #c62828;
+      border: 1.5px solid #c62828;
       color: #c62828;
-      font-size: 8px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 2px 14px;
+      border-radius: 14px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       white-space: nowrap;
-    }
-    .copy-badge {
-      display: inline-block;
-      background: #c62828;
-      color: #ffffff;
-      font-size: 8px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      white-space: nowrap;
+      background: #fff;
     }
     .header-layout {
       display: flex;
@@ -270,7 +258,14 @@ export function generateDeliveryChallanPrintHtml(challan) {
     }
     .header-left {
       flex: 1.1;
-      padding-top: 1px;
+      display: flex;
+      align-items: center;
+    }
+    .header-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .header-right {
       flex: 1.2;
@@ -450,9 +445,9 @@ export function generateDeliveryChallanPrintHtml(challan) {
 </head>
 <body>
   <div class="a4-sheet">
-    <!-- TOP HALF: FIRST COPY -->
+    <!-- TOP HALF -->
     <div class="slip-wrapper">
-      ${renderSingleSlip('First Copy', 'Original')}
+      ${renderSingleSlip()}
     </div>
 
     <!-- MIDDLE: CUT HERE DIVIDER -->
@@ -466,9 +461,9 @@ export function generateDeliveryChallanPrintHtml(challan) {
       <div class="cut-line"></div>
     </div>
 
-    <!-- BOTTOM HALF: SECOND COPY -->
+    <!-- BOTTOM HALF -->
     <div class="slip-wrapper">
-      ${renderSingleSlip('Second Copy', 'Duplicate')}
+      ${renderSingleSlip()}
     </div>
   </div>
 </body>
