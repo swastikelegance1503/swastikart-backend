@@ -6,12 +6,13 @@
  * 
  * ફીચર્સ:
  * ૧. Bills (GST/ઇન્વોઇસ બિલ) અને Delivery Challans (ચલાણ) બંને આપમેળે
- *    અલગ અલગ Google Sheet (અથવા અલગ અલગ Tabs) માં સેવ થશે.
+ *    અલગ અલગ Google Sheet માં સેવ થશે:
  *    - Bills Sheet: "Swastik Art - Bills Record" (Tab: "Bills")
  *    - Challans Sheet: "Swastik Art - Delivery Challans Record" (Tab: "Delivery Challans")
- * ૨. Google Drive ફોલ્ડર: "Swastik Art - Challans & Bills"
- * ૩. ડુપ્લિકેટ નહીં થાય - એક જ નંબર અને પેઢી હોય તો તે રો અપડેટ થશે.
- * ૪. ડિલીટ કરતી વખતે શીટ અને ડ્રાઇવમાંથી ફાઇલ આપમેળે હટી જશે.
+ * ૨. Google Drive માં પ્રિન્ટેબલ PDF તરીકે સેવ થશે (કોઈ raw HTML કોડ નહીં દેખાય).
+ * ૩. લિંક પર ક્લિક કરતાં સીધું PDF વ્યુઅર ખૂલશે (પ્રિન્ટ અને ડાઉનલોડ બટન સાથે).
+ * ૪. ડુપ્લિકેટ નહીં થાય - એક જ નંબર અને પેઢી હોય તો તે રો અપડેટ થશે.
+ * ૫. ડિલીટ કરતી વખતે શીટ અને ડ્રાઇવમાંથી ફાઇલ આપમેળે હટી જશે.
  * 
  * મહત્વપૂર્ણ પગલાં (Authorization & Deployment Guide):
  * 1. કોડ પેસ્ટ કર્યા પછી ઉપર ડ્રોપડાઉનમાંથી "testAuth" પસંદ કરો અને "Run" (▶️) દબાવો.
@@ -98,13 +99,20 @@ function doPost(e) {
         }
       });
 
-      // ફાઈલ ડિલીટ (Trash)
+      // ફાઈલ ડિલીટ (Trash) - PDF અને જૂની HTML બંને તપાસો
       if (data.fileName) {
-        const fileIter = folder.getFilesByName(data.fileName);
-        while (fileIter.hasNext()) {
-          fileIter.next().setTrashed(true);
-          fileDeleted = true;
-        }
+        const fileNamesToDelete = [
+          data.fileName,
+          data.fileName.replace(/\.html$/i, ".pdf"),
+          data.fileName.replace(/\.pdf$/i, ".html")
+        ];
+        fileNamesToDelete.forEach(function(fname) {
+          const fileIter = folder.getFilesByName(fname);
+          while (fileIter.hasNext()) {
+            fileIter.next().setTrashed(true);
+            fileDeleted = true;
+          }
+        });
       }
 
       return ContentService.createTextOutput(JSON.stringify({
@@ -118,22 +126,43 @@ function doPost(e) {
     }
 
     // ------------------------------------------------------------------------
-    // એક્શન ૨: ફાઈલ સેવ કરવી (HTML / PDF Preview Backup)
+    // એક્શન ૨: PDF ફાઈલ બનાવવી અને Drive માં સેવ કરવી
     // ------------------------------------------------------------------------
-    const defaultFileName = isDeliveryChallan
-      ? ("Challan_" + (data.challanNo || "0") + "_" + (data.firmName || "Firm") + ".html")
-      : ("Bill_" + (data.billNo || "0") + "_" + (data.firmName || "Firm") + ".html");
-    const fileName = data.fileName || defaultFileName;
-    const blob = Utilities.newBlob(data.htmlContent || "", "text/html", fileName);
+    const cleanFirm = (data.firmName || "Firm").toString().replace(/[^a-zA-Z0-9_-]/g, "_");
+    const cleanCustomer = (data.merchantName || "Customer").toString().replace(/[^a-zA-Z0-9_-]/g, "_");
 
-    let file;
-    const fileIter = folder.getFilesByName(fileName);
-    if (fileIter.hasNext()) {
-      file = fileIter.next();
-      file.setContent(data.htmlContent || "");
-    } else {
-      file = folder.createFile(blob);
+    const baseName = isDeliveryChallan
+      ? ("Challan_" + (data.challanNo || "0") + "_" + cleanFirm + "_" + cleanCustomer)
+      : ("Bill_" + (data.billNo || "0") + "_" + cleanFirm + "_" + cleanCustomer);
+
+    let pdfFileName = data.fileName ? data.fileName.replace(/\.html$/i, ".pdf") : (baseName + ".pdf");
+    if (!pdfFileName.toLowerCase().endsWith(".pdf")) {
+      pdfFileName += ".pdf";
     }
+
+    // HTML ને સીધું સુંદર PDF બ્લોબમાં કન્વર્ટ કરો (જેથી Drive માં raw HTML કોડ ન દેખાય)
+    const tempHtmlBlob = Utilities.newBlob(data.htmlContent || "", "text/html", "preview.html");
+    let fileBlob;
+    try {
+      fileBlob = tempHtmlBlob.getAs("application/pdf").setName(pdfFileName);
+    } catch (e) {
+      Logger.log("PDF conversion warning: " + e);
+      fileBlob = tempHtmlBlob.setName(pdfFileName);
+    }
+
+    // જૂની PDF કે જૂની HTML ફાઈલ હોય તો Trash કરો જેથી ડુપ્લિકેટ ના બને
+    const oldPdfFiles = folder.getFilesByName(pdfFileName);
+    while (oldPdfFiles.hasNext()) {
+      oldPdfFiles.next().setTrashed(true);
+    }
+    const oldHtmlName = pdfFileName.replace(/\.pdf$/i, ".html");
+    const oldHtmlFiles = folder.getFilesByName(oldHtmlName);
+    while (oldHtmlFiles.hasNext()) {
+      oldHtmlFiles.next().setTrashed(true);
+    }
+
+    // નવો PDF ફાઈલ બનાવો
+    const file = folder.createFile(fileBlob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     const fileUrl = file.getUrl();
 
@@ -193,7 +222,7 @@ function doPost(e) {
           "Rate (ભાવ ₹)",
           "Net Amount (કુલ નેટ રકમ ₹)",
           "Status (સ્ટેટસ)",
-          "Challan File Link (ચલાણ જુઓ)",
+          "Challan PDF Link (ચલાણ જુઓ)",
           "Synced At (સિંક સમય)"
         ];
         sheet.appendRow(challanHeaders);
@@ -268,7 +297,7 @@ function doPost(e) {
           "GST Amount (કુલ GST ₹)",
           "Grand Total (કુલ રકમ ₹)",
           "Payment Status (પેમેન્ટ સ્ટેટસ)",
-          "Drive Bill File Link (બિલ જુઓ)",
+          "Drive Bill PDF Link (બિલ જુઓ)",
           "Synced At (સિંક સમય)"
         ];
         sheet.appendRow(billHeaders);
@@ -328,7 +357,7 @@ function doPost(e) {
       recordType: isDeliveryChallan ? "DELIVERY_CHALLAN" : "BILL",
       targetSheetName: targetSheetFileName,
       targetTabName: targetTabName,
-      message: (isDeliveryChallan ? "ચલાણ" : "બિલ") + " સફળતાપૂર્વક Google Drive અને તેની અલગ Google Sheet માં સેવ થઈ ગયું!",
+      message: (isDeliveryChallan ? "ચલાણ PDF" : "બિલ PDF") + " સફળતાપૂર્વક Google Drive અને તેની અલગ Google Sheet માં સેવ થઈ ગયું!",
       fileUrl: fileUrl,
       sheetUrl: spreadsheet.getUrl(),
       folderUrl: folder.getUrl()
@@ -345,10 +374,10 @@ function doPost(e) {
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
-    message: "Swastik Art Multi-Sheet Sync Webhook is ACTIVE for swastikelegance065@gmail.com",
+    message: "Swastik Art Multi-Sheet PDF Sync Webhook is ACTIVE for swastikelegance065@gmail.com",
     features: [
-      "Bills Sheet: Swastik Art - Bills Record",
-      "Challans Sheet: Swastik Art - Delivery Challans Record"
+      "Bills Sheet: Swastik Art - Bills Record (PDF Link)",
+      "Challans Sheet: Swastik Art - Delivery Challans Record (PDF Link)"
     ],
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);

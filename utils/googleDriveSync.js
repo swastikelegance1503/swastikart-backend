@@ -77,7 +77,7 @@ export async function syncChallanToGoogleDrive(challan) {
 
     const cleanFirmName = (challanObj.firmName || 'Firm').replace(/[^a-zA-Z0-9_-]/g, '_');
     const cleanMerchantName = (challanObj.merchantName || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `Bill_${challanObj.billNo || '0'}_${cleanFirmName}_${cleanMerchantName}.html`;
+    const fileName = `Bill_${challanObj.billNo || '0'}_${cleanFirmName}_${cleanMerchantName}.pdf`;
 
     const payload = {
       action: 'SAVE_CHALLAN',
@@ -197,7 +197,7 @@ export async function deleteChallanFromGoogleDrive(challan) {
     const challanObj = typeof challan.toObject === 'function' ? challan.toObject() : challan;
     const cleanFirmName = (challanObj.firmName || 'Firm').replace(/[^a-zA-Z0-9_-]/g, '_');
     const cleanMerchantName = (challanObj.merchantName || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `Bill_${challanObj.billNo || '0'}_${cleanFirmName}_${cleanMerchantName}.html`;
+    const fileName = `Bill_${challanObj.billNo || '0'}_${cleanFirmName}_${cleanMerchantName}.pdf`;
 
     const payload = {
       action: 'DELETE_CHALLAN',
@@ -280,7 +280,7 @@ export async function syncDeliveryChallanToGoogleDrive(deliveryChallan) {
 
     const cleanFirmName = (challanObj.firmName || 'Firm').replace(/[^a-zA-Z0-9_-]/g, '_');
     const cleanMerchantName = (challanObj.merchantName || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `Challan_${challanObj.challanNo || '0'}_${cleanFirmName}_${cleanMerchantName}.html`;
+    const fileName = `Challan_${challanObj.challanNo || '0'}_${cleanFirmName}_${cleanMerchantName}.pdf`;
 
     const payload = {
       action: 'SAVE_DELIVERY_CHALLAN',
@@ -396,7 +396,7 @@ export async function deleteDeliveryChallanFromGoogleDrive(deliveryChallan) {
     const challanObj = typeof deliveryChallan.toObject === 'function' ? deliveryChallan.toObject() : deliveryChallan;
     const cleanFirmName = (challanObj.firmName || 'Firm').replace(/[^a-zA-Z0-9_-]/g, '_');
     const cleanMerchantName = (challanObj.merchantName || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `Challan_${challanObj.challanNo || '0'}_${cleanFirmName}_${cleanMerchantName}.html`;
+    const fileName = `Challan_${challanObj.challanNo || '0'}_${cleanFirmName}_${cleanMerchantName}.pdf`;
 
     const payload = {
       action: 'DELETE_DELIVERY_CHALLAN',
