@@ -21,7 +21,7 @@ export async function createChallan(req, res) {
       merchantName: rawMerchantName,
       merchantAddress: rawMerchantAddress,
       merchantMobile: rawMerchantMobile,
-      merchantGstin,
+      merchantGstin: rawMerchantGstin,
       stateCode,
       billNo: rawBillNo,
       bookNo,
@@ -69,6 +69,7 @@ export async function createChallan(req, res) {
     let merchantName = rawMerchantName;
     let merchantAddress = rawMerchantAddress;
     let merchantMobile = rawMerchantMobile || '';
+    let merchantGstin = (rawMerchantGstin || '').trim();
     let merchantRef = undefined;
 
     if (merchantId) {
@@ -118,7 +119,7 @@ export async function createChallan(req, res) {
       };
     });
 
-    const parsedDiscountRate = Math.max(0, Number(discountRate) || 0);
+    let parsedDiscountRate = Math.max(0, Number(discountRate) || 0);
     let parsedDiscountAmount = 0;
     if (parsedDiscountRate > 0) {
       parsedDiscountAmount = Number(((subTotal * parsedDiscountRate) / 100).toFixed(2));
