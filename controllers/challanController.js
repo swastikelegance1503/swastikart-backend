@@ -30,6 +30,7 @@ export async function createChallan(req, res) {
       dueDate,
       items,
       discount = 0,
+      discountRate = 0,
       isGstApplicable = false,
       cgstRate = 0,
       sgstRate = 0,
@@ -116,8 +117,16 @@ export async function createChallan(req, res) {
       };
     });
 
-    const parsedDiscount = Math.max(0, Number(discount) || 0);
-    const totalAmountBeforeTax = Math.max(0, Number((subTotal - parsedDiscount).toFixed(2)));
+    const parsedDiscountRate = Math.max(0, Number(discountRate) || 0);
+    let parsedDiscountAmount = 0;
+    if (parsedDiscountRate > 0) {
+      parsedDiscountAmount = Number(((subTotal * parsedDiscountRate) / 100).toFixed(2));
+    } else if (Number(discount) > 0) {
+      parsedDiscountAmount = Number(discount);
+      parsedDiscountRate = subTotal > 0 ? Number(((parsedDiscountAmount / subTotal) * 100).toFixed(2)) : 0;
+    }
+
+    const totalAmountBeforeTax = Math.max(0, Number((subTotal - parsedDiscountAmount).toFixed(2)));
 
     // ૫. GST ગણતરી (જો GST એડ કરવો હોય તો)
     const hasGst = Boolean(
@@ -189,7 +198,8 @@ export async function createChallan(req, res) {
       items: processedItems,
       totalQty,
       subTotal: Number(subTotal.toFixed(2)),
-      discount: parsedDiscount,
+      discount: parsedDiscountAmount,
+      discountRate: parsedDiscountRate,
       totalAmountBeforeTax,
       isGstApplicable: hasGst,
       cgstRate: parsedCgstRate,
@@ -422,6 +432,7 @@ export async function updateChallan(req, res) {
     const {
       items,
       discount,
+      discountRate,
       isGstApplicable,
       cgstRate,
       sgstRate,
@@ -479,11 +490,22 @@ export async function updateChallan(req, res) {
       challan.subTotal = Number(subTotal.toFixed(2));
     }
 
-    if (discount !== undefined) {
-      challan.discount = Math.max(0, Number(discount) || 0);
+    let parsedDiscountRate = challan.discountRate || 0;
+    if (discountRate !== undefined) {
+      parsedDiscountRate = Math.max(0, Number(discountRate) || 0);
     }
 
-    challan.totalAmountBeforeTax = Math.max(0, Number((challan.subTotal - challan.discount).toFixed(2)));
+    let parsedDiscountAmount = 0;
+    if (parsedDiscountRate > 0) {
+      parsedDiscountAmount = Number(((challan.subTotal * parsedDiscountRate) / 100).toFixed(2));
+    } else if (discount !== undefined) {
+      parsedDiscountAmount = Math.max(0, Number(discount) || 0);
+      parsedDiscountRate = challan.subTotal > 0 ? Number(((parsedDiscountAmount / challan.subTotal) * 100).toFixed(2)) : 0;
+    }
+
+    challan.discountRate = parsedDiscountRate;
+    challan.discount = parsedDiscountAmount;
+    challan.totalAmountBeforeTax = Math.max(0, Number((challan.subTotal - parsedDiscountAmount).toFixed(2)));
 
     const applyGst = isGstApplicable !== undefined ? Boolean(isGstApplicable) : challan.isGstApplicable;
     challan.isGstApplicable = applyGst;

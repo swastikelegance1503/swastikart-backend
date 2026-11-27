@@ -126,6 +126,11 @@ const challanSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  discountRate: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   totalAmountBeforeTax: {
     type: Number,
     required: true,
