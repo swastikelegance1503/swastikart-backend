@@ -230,44 +230,59 @@ export async function createChallan(req, res) {
 export async function listChallans(req, res) {
   try {
     const { firm, merchantId, startDate, endDate, status, search } = req.query;
-    const query = {};
+    const andConditions = [];
 
     // ૧. ફર્મ વાઈઝ ફિલ્ટર
-    if (firm) {
-      query.firmName = { $regex: new RegExp(firm.trim(), 'i') };
+    if (firm && firm !== 'All') {
+      andConditions.push({ firmName: { $regex: new RegExp(firm.trim(), 'i') } });
     }
 
     // ૨. મર્ચન્ટ ફિલ્ટર
-    if (merchantId) {
-      query.merchant = merchantId;
+    if (merchantId && merchantId !== 'All') {
+      const merchantObj = await Merchant.findById(merchantId).lean();
+      if (merchantObj) {
+        andConditions.push({
+          $or: [
+            { merchant: merchantId },
+            { merchantName: { $regex: new RegExp(`^${merchantObj.name.trim()}$`, 'i') } }
+          ]
+        });
+      } else {
+        andConditions.push({ merchant: merchantId });
+      }
     }
 
     // ૩. સ્ટેટસ ફિલ્ટર
-    if (status) {
-      query.status = status;
+    if (status && status !== 'All') {
+      andConditions.push({ status });
     }
 
     // ૪. તારીખ રેન્જ ફિલ્ટર
     if (startDate || endDate) {
-      query.date = {};
-      if (startDate) query.date.$gte = new Date(startDate);
+      const dateCond = {};
+      if (startDate) dateCond.$gte = new Date(startDate);
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        query.date.$lte = end;
+        dateCond.$lte = end;
       }
+      andConditions.push({ date: dateCond });
     }
 
     // ૫. સર્ચ ફિલ્ટર
-    if (search) {
-      query.$or = [
-        { merchantName: { $regex: search, $options: 'i' } },
-        { billNo: { $regex: search, $options: 'i' } },
-        { challanNo: { $regex: search, $options: 'i' } },
-        { merchantMobile: { $regex: search, $options: 'i' } }
-      ];
+    if (search && search.trim()) {
+      const term = search.trim();
+      andConditions.push({
+        $or: [
+          { merchantName: { $regex: term, $options: 'i' } },
+          { billNo: { $regex: term, $options: 'i' } },
+          { challanNo: { $regex: term, $options: 'i' } },
+          { merchantMobile: { $regex: term, $options: 'i' } }
+        ]
+      });
     }
 
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
     const challans = await Challan.find(query).sort({ date: -1, createdAt: -1 });
 
     // સરવાળા (Summary totals)
