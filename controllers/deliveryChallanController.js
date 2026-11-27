@@ -89,8 +89,9 @@ export async function getNextChallanNo(req, res) {
         maxNum = parsed;
       }
 
-      if (c.pChallanNo) {
-        const cleanP = String(c.pChallanNo).replace(/\D/g, '');
+      const val = c.pChallanNo || c.challanNo;
+      if (val) {
+        const cleanP = String(val).replace(/\D/g, '');
         const parsedP = parseInt(cleanP, 10);
         if (!isNaN(parsedP) && parsedP > maxPNum) {
           maxPNum = parsedP;
@@ -203,8 +204,9 @@ export async function createDeliveryChallan(req, res) {
       const latest = await DeliveryChallan.find({ firmName }).sort({ createdAt: -1 }).limit(50).lean();
       let maxPNum = 0;
       latest.forEach((c) => {
-        if (c.pChallanNo) {
-          const cleanP = String(c.pChallanNo).replace(/\D/g, '');
+        const val = c.pChallanNo || c.challanNo;
+        if (val) {
+          const cleanP = String(val).replace(/\D/g, '');
           const parsedP = parseInt(cleanP, 10);
           if (!isNaN(parsedP) && parsedP > maxPNum) {
             maxPNum = parsedP;
@@ -298,7 +300,9 @@ export async function updateDeliveryChallan(req, res) {
 
     if (firmName) existing.firmName = firmName;
     if (challanNo) existing.challanNo = String(challanNo).trim();
-    if (pChallanNo !== undefined) existing.pChallanNo = pChallanNo;
+    if (pChallanNo !== undefined) {
+      existing.pChallanNo = String(pChallanNo).trim() || existing.pChallanNo || existing.challanNo || '1';
+    }
     if (date) existing.date = date;
     if (merchantId !== undefined) existing.merchant = merchantId || null;
     if (merchantName) existing.merchantName = merchantName.trim();
