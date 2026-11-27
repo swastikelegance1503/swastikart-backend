@@ -104,8 +104,6 @@ export function generateDeliveryChallanPrintHtml(challan) {
             <span style="font-size: 10px; font-weight: 600; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${challan.merchantAddress || ''}</span>
           </div>
           <div class="party-line" style="border-bottom: none; margin-bottom: 0;">
-            ${challan.merchantGstin ? `<span style="color: #c62828; font-weight: 800; margin-right: 4px; white-space: nowrap; font-size: 10px;">GSTIN:</span><span style="font-weight: 700; font-size: 10px; color: #111; margin-right: 8px;">${challan.merchantGstin}</span>` : ''}
-            <span style="flex: 1;"></span>
             <span style="color: #c62828; font-weight: 800; margin-right: 4px; white-space: nowrap; font-size: 10.5px;">City:</span>
             <span style="font-weight: 800; font-size: 10.5px; color: #111; white-space: nowrap;">${challan.merchantCity || 'Surat'}</span>
           </div>
