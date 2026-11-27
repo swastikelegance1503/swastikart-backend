@@ -2,6 +2,12 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/env.js';
 
 export function authenticateToken(req, res, next) {
+  // Allow public access to HTML print preview endpoints (opened directly in new browser tabs)
+  const reqUrl = req.originalUrl || req.url || req.path || '';
+  if (reqUrl.includes('/print')) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   const match = typeof authHeader === 'string'
     ? authHeader.match(/^Bearer\s+(\S+)$/i)
