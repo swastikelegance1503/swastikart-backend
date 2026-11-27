@@ -16,6 +16,11 @@ const merchantSchema = new mongoose.Schema({
     type: String,
     required: [true, 'મોબાઇલ નંબર જરૂરી છે (Mobile number is required)'],
     trim: true
+  },
+  gstin: {
+    type: String,
+    trim: true,
+    default: ''
   }
 }, {
   timestamps: true

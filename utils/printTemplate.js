@@ -450,6 +450,11 @@ export function generateChallanPrintHtml(challan) {
             <span class="detail-label">City :</span>
             <span class="detail-val">${challan.merchantCity || 'Surat'}</span>
           </div>
+          ${challan.merchantGstin ? `
+          <div class="detail-row">
+            <span class="detail-label">GSTIN :</span>
+            <span class="detail-val" style="font-weight: 600; letter-spacing: 0.5px;">${challan.merchantGstin}</span>
+          </div>` : ''}
         </div>
 
         <!-- Right: Bill No, Ch No, Date -->

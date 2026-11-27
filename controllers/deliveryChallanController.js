@@ -143,6 +143,7 @@ export async function createDeliveryChallan(req, res) {
       merchantAddress: rawMerchantAddress,
       merchantCity = 'Surat',
       merchantMobile = '',
+      merchantGstin = '',
       items = [],
       status = 'Delivered',
       notes = ''
@@ -152,6 +153,7 @@ export async function createDeliveryChallan(req, res) {
     let merchantAddress = rawMerchantAddress;
     let merchantCityVal = merchantCity;
     let merchantMobileVal = merchantMobile;
+    let merchantGstinVal = merchantGstin;
 
     if (merchantId) {
       const merchantObj = await Merchant.findById(merchantId);
@@ -159,7 +161,8 @@ export async function createDeliveryChallan(req, res) {
         merchantName = merchantName || merchantObj.name;
         merchantAddress = merchantAddress || merchantObj.address || '';
         merchantCityVal = merchantCityVal || merchantObj.city || 'Surat';
-        merchantMobileVal = merchantMobileVal || merchantObj.mobile || '';
+        merchantMobileVal = merchantMobileVal || merchantObj.mobileNumber || merchantObj.mobile || '';
+        merchantGstinVal = merchantGstinVal || merchantObj.gstin || '';
       }
     }
 
@@ -227,6 +230,7 @@ export async function createDeliveryChallan(req, res) {
       merchantAddress: merchantAddress ? merchantAddress.trim() : '',
       merchantCity: merchantCityVal ? merchantCityVal.trim() : 'Surat',
       merchantMobile: merchantMobileVal ? merchantMobileVal.trim() : '',
+      merchantGstin: merchantGstinVal ? merchantGstinVal.trim().toUpperCase() : '',
       items: formattedItems,
       totalQty,
       netAmount,
@@ -272,6 +276,7 @@ export async function updateDeliveryChallan(req, res) {
       merchantAddress,
       merchantCity,
       merchantMobile,
+      merchantGstin,
       items,
       status,
       notes
@@ -309,6 +314,7 @@ export async function updateDeliveryChallan(req, res) {
     if (merchantAddress !== undefined) existing.merchantAddress = merchantAddress.trim();
     if (merchantCity !== undefined) existing.merchantCity = merchantCity.trim();
     if (merchantMobile !== undefined) existing.merchantMobile = merchantMobile.trim();
+    if (merchantGstin !== undefined) existing.merchantGstin = merchantGstin ? merchantGstin.trim().toUpperCase() : '';
     if (status) existing.status = status;
     if (notes !== undefined) existing.notes = notes;
 

@@ -10,7 +10,8 @@ export async function listMerchants(req, res) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { address: { $regex: search, $options: 'i' } },
-        { mobileNumber: { $regex: search, $options: 'i' } }
+        { mobileNumber: { $regex: search, $options: 'i' } },
+        { gstin: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -49,7 +50,7 @@ export async function getMerchant(req, res) {
 // નવો મર્ચન્ટ ઉમેરો (Create / Add Merchant)
 export async function createMerchant(req, res) {
   try {
-    const { name, address, mobileNumber } = req.body;
+    const { name, address, mobileNumber, gstin } = req.body;
 
     if (!name || !address || !mobileNumber) {
       return res.status(400).json({
@@ -61,7 +62,8 @@ export async function createMerchant(req, res) {
     const merchant = await Merchant.create({
       name: name.trim(),
       address: address.trim(),
-      mobileNumber: mobileNumber.trim()
+      mobileNumber: mobileNumber.trim(),
+      gstin: gstin ? gstin.trim().toUpperCase() : ''
     });
 
     return res.status(201).json({
@@ -81,7 +83,7 @@ export async function createMerchant(req, res) {
 // મર્ચન્ટ ની વિગતો અપડેટ કરો (Update Merchant)
 export async function updateMerchant(req, res) {
   try {
-    const { name, address, mobileNumber } = req.body;
+    const { name, address, mobileNumber, gstin } = req.body;
     const merchant = await Merchant.findById(req.params.id);
 
     if (!merchant) {
@@ -94,6 +96,7 @@ export async function updateMerchant(req, res) {
     if (name) merchant.name = name.trim();
     if (address) merchant.address = address.trim();
     if (mobileNumber) merchant.mobileNumber = mobileNumber.trim();
+    if (gstin !== undefined) merchant.gstin = gstin ? gstin.trim().toUpperCase() : '';
 
     await merchant.save();
 

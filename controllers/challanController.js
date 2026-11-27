@@ -78,6 +78,7 @@ export async function createChallan(req, res) {
         merchantName = merchantName || merchantObj.name;
         merchantAddress = merchantAddress || merchantObj.address;
         merchantMobile = merchantMobile || merchantObj.mobileNumber;
+        merchantGstin = merchantGstin || merchantObj.gstin || '';
       }
     }
 

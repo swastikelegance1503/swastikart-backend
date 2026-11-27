@@ -86,6 +86,11 @@ const deliveryChallanSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  merchantGstin: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   // આઇટમ્સ લિસ્ટ
   items: {
     type: [deliveryChallanItemSchema],
