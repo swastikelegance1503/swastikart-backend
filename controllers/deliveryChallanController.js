@@ -69,7 +69,7 @@ export async function getDeliveryChallans(req, res) {
 }
 
 /**
- * આગામી ચલાણ નંબર મેળવો (Get Next Auto-Increment Challan No)
+ * આગામી ચલાણ નંબર મેળવો (Get Next Auto-Increment Challan No & P.Challan No)
  */
 export async function getNextChallanNo(req, res) {
   try {
@@ -78,23 +78,34 @@ export async function getNextChallanNo(req, res) {
 
     const latest = await DeliveryChallan.find({ firmName })
       .sort({ createdAt: -1 })
-      .limit(20)
+      .limit(50)
       .lean();
 
     let maxNum = 0;
+    let maxPNum = 0;
     latest.forEach((c) => {
       const parsed = parseInt(c.challanNo, 10);
       if (!isNaN(parsed) && parsed > maxNum) {
         maxNum = parsed;
       }
+
+      if (c.pChallanNo) {
+        const cleanP = String(c.pChallanNo).replace(/\D/g, '');
+        const parsedP = parseInt(cleanP, 10);
+        if (!isNaN(parsedP) && parsedP > maxPNum) {
+          maxPNum = parsedP;
+        }
+      }
     });
 
     const nextNo = maxNum > 0 ? String(maxNum + 1) : '1';
+    const nextPNo = maxPNum > 0 ? String(maxPNum + 1) : nextNo;
 
     return res.json({
       success: true,
       firmName,
-      nextChallanNo: nextNo
+      nextChallanNo: nextNo,
+      nextPChallanNo: nextPNo
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -186,11 +197,28 @@ export async function createDeliveryChallan(req, res) {
       challanNo = !isNaN(lastNum) && lastNum > 0 ? String(lastNum + 1) : '1';
     }
 
+    // Check / Generate P.Challan No
+    let finalPChallanNo = pChallanNo ? String(pChallanNo).trim() : '';
+    if (!finalPChallanNo) {
+      const latest = await DeliveryChallan.find({ firmName }).sort({ createdAt: -1 }).limit(50).lean();
+      let maxPNum = 0;
+      latest.forEach((c) => {
+        if (c.pChallanNo) {
+          const cleanP = String(c.pChallanNo).replace(/\D/g, '');
+          const parsedP = parseInt(cleanP, 10);
+          if (!isNaN(parsedP) && parsedP > maxPNum) {
+            maxPNum = parsedP;
+          }
+        }
+      });
+      finalPChallanNo = maxPNum > 0 ? String(maxPNum + 1) : challanNo;
+    }
+
     const deliveryChallan = new DeliveryChallan({
       user: req.user?._id || req.user?.id,
       firmName,
       challanNo,
-      pChallanNo,
+      pChallanNo: finalPChallanNo,
       date,
       merchant: merchantId || null,
       merchantName: merchantName.trim(),
